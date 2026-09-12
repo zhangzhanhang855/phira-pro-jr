@@ -1,0 +1,163 @@
+
+{
+  "formatVersion": 3,
+  "offset": 0.0,
+  "numOfNotes": 485,
+  "judgeLineList": [
+    {
+      "id": 0,
+      "group": 0,
+      "notesAbove": [
+        {
+          "type": 1,
+          "time": 0.4,
+          "positionX": -4.0,
+          "holdTime": 0.0,
+          "speed": 1.0,
+          "floorPosition": 0.48
+        },
+        {
+          "type": 1,
+          "time": 0.8,
+          "positionX": 4.0,
+          "holdTime": 0.0,
+          "speed": 1.0,
+          "floorPosition": 0.96
+        },
+        {
+          "type": 3,
+          "time": 1.2,
+          "positionX": 0.0,
+          "holdTime": 0.8,
+          "speed": 1.0,
+          "floorPosition": 1.44
+        },
+        {
+          "type": 4,
+          "time": 2.4,
+          "positionX": -6.0,
+          "holdTime": 0.0,
+          "speed": 1.0,
+          "floorPosition": 2.88
+        },
+        {
+          "type": 4,
+          "time": 2.6,
+          "positionX": 6.0,
+          "holdTime": 0.0,
+          "speed": 1.0,
+          "floorPosition": 3.12
+        },
+        {
+          "type": 1,
+          "time": 10.0,
+          "positionX": -3.0,
+          "holdTime": 0.0,
+          "speed": 1.2,
+          "floorPosition": 12.0
+        },
+        {
+          "type": 1,
+          "time": 10.2,
+          "positionX": 3.0,
+          "holdTime": 0.0,
+          "speed": 1.2,
+          "floorPosition": 12.24
+        },
+        {
+          "type": 2,
+          "time": 10.4,
+          "positionX": -5.0,
+          "holdTime": 0.0,
+          "speed": 1.2,
+          "floorPosition": 12.48
+        },
+        {
+          "type": 2,
+          "time": 10.5,
+          "positionX": -2.0,
+          "holdTime": 0.0,
+          "speed": 1.2,
+          "floorPosition": 12.6
+        },
+        {
+          "type": 2,
+          "time": 10.6,
+          "positionX": 2.0,
+          "holdTime": 0.0,
+          "speed": 1.2,
+          "floorPosition": 12.72
+        },
+        {
+          "type": 2,
+          "time": 10.7,
+          "positionX": 5.0,
+          "holdTime": 0.0,
+          "speed": 1.2,
+          "floorPosition": 12.84
+        }
+      ],
+      "notesBelow": [],
+      "speedEvents": [
+        {
+          "startTime": 0.0,
+          "endTime": 10.0,
+          "value": 1.2
+        },
+        {
+          "startTime": 10.0,
+          "endTime": 20.0,
+          "value": 1.5
+        }
+      ],
+      "judgeLineMoveEvents": [
+        {
+          "startTime": 0.0,
+          "endTime": 0.5,
+          "start": 0.5,
+          "end": 0.5,
+          "start2": 0.1,
+          "end2": 0.5
+        },
+        {
+          "startTime": 9.8,
+          "endTime": 10.2,
+          "start": 0.5,
+          "end": 0.5,
+          "start2": 0.5,
+          "end2": 0.6
+        }
+      ],
+      "judgeLineRotateEvents": [
+        {
+          "startTime": 0.0,
+          "endTime": 10.0,
+          "start": 0.0,
+          "end": 0.0
+        },
+        {
+          "startTime": 10.0,
+          "endTime": 11.0,
+          "start": 0.0,
+          "end": 15.0
+        },
+        {
+          "startTime": 11.0,
+          "endTime": 12.0,
+          "start": 15.0,
+          "end": -15.0
+        }
+      ],
+      "judgeLineDisappearEvents": [
+        {
+          "startTime": 0.0,
+          "endTime": 999.0,
+          "start": 1.0,
+          "end": 1.0
+        }
+      ]
+    }
+  ]
+}
+
+```

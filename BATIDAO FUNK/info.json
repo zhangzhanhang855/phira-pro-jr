@@ -1,0 +1,9 @@
+{
+  "title": "JR Masterpiece",
+  "artist": "JR Artist",
+  "bpm": 120,
+  "difficulty": "IN Lv.12",
+  "chart": "chart.json",
+  "audio": "audio.mp3",
+  "bg": "bg.jpg"
+}
