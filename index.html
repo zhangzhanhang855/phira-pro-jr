@@ -1,630 +1,754 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>JR AI - Phira Chart Simulator</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Phira Web Player</title>
+  <!-- JSZip CDN for in-memory zip decompression -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
-    :root {
-      --bg-color: #0d0f18;
-      --panel-bg: #161926;
-      --accent-blue: #00beff;
-      --accent-yellow: #ffe600;
-      --accent-red: #ff3b3b;
-      --accent-green: #00e676;
-      --text-main: #f0f4f8;
-    }
-
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      user-select: none;
     }
-
-    body {
-      background-color: var(--bg-color);
-      color: var(--text-main);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    /* Left Panel: JSON Input & Controls */
-    #sidebar {
-      width: 380px;
-      background: var(--panel-bg);
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-      border-right: 2px solid rgba(255, 255, 255, 0.08);
-      z-index: 10;
-    }
-
-    h2 {
-      font-size: 1.2rem;
-      color: var(--accent-blue);
-      letter-spacing: 1px;
-    }
-
-    textarea {
-      width: 100%;
-      height: 260px;
-      background: #090a10;
-      color: #a0aec0;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 6px;
-      padding: 10px;
-      font-family: monospace;
-      font-size: 0.85rem;
-      resize: vertical;
-      outline: none;
-    }
-
-    textarea:focus {
-      border-color: var(--accent-blue);
-    }
-
-    .btn-group {
-      display: flex;
-      gap: 10px;
-    }
-
-    button {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: transform 0.1s, opacity 0.2s;
-    }
-
-    button:active {
-      transform: scale(0.97);
-    }
-
-    .btn-primary {
-      background: var(--accent-blue);
-      color: #000;
-    }
-
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.1);
-      color: #fff;
-    }
-
-    .legend {
-      background: rgba(0, 0, 0, 0.3);
-      padding: 10px;
-      border-radius: 6px;
-      font-size: 0.8rem;
-      line-height: 1.5;
-    }
-
-    .legend span {
-      font-weight: bold;
-    }
-
-    .key-hint {
-      font-size: 0.8rem;
-      color: #718096;
-      margin-top: auto;
-    }
-
-    /* Right Panel: Game Area */
-    #game-container {
-      flex: 1;
-      position: relative;
-      background: radial-gradient(circle at center, #1a1e2e 0%, #08090e 100%);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    canvas {
+    body, html {
       width: 100%;
       height: 100%;
-      display: block;
+      overflow: hidden;
+      background-color: #000;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #fff;
     }
-
-    /* HUD Overlay */
-    #hud {
+    #canvas-container {
       position: absolute;
-      top: 20px;
-      left: 20px;
-      right: 20px;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    /* UI Overlay: File Loader */
+    #loader-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #1b212f, #050608);
+      z-index: 100;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 30px 40px;
+      border-radius: 12px;
+      backdrop-filter: blur(16px);
+      text-align: center;
+      max-width: 480px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    }
+    .title {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+      color: #79c0ff;
+    }
+    .desc {
+      font-size: 14px;
+      color: #8b949e;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    .file-btn {
+      display: inline-block;
+      position: relative;
+      background: #238636;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      overflow: hidden;
+    }
+    .file-btn:hover {
+      background: #2ea043;
+    }
+    .file-btn input[type="file"] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+    #status-msg {
+      margin-top: 15px;
+      font-size: 13px;
+      color: #58a6ff;
+      min-height: 18px;
+    }
+    /* Settlement Modal */
+    #settle-overlay {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(20px);
+      z-index: 100;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+    .settle-box {
+      width: 80%;
+      max-width: 600px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .rank-text {
+      font-size: 96px;
+      font-weight: 900;
+      margin: 10px 0;
+      letter-spacing: 4px;
+      color: #e3b341;
+      text-shadow: 0 0 20px rgba(227, 179, 65, 0.5);
+    }
+    .score-detail {
+      width: 100%;
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    .stat-row {
       display: flex;
       justify-content: space-between;
-      pointer-events: none;
-      font-weight: bold;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 8px 0;
+      font-size: 15px;
     }
-
-    #score-display {
-      font-size: 1.8rem;
-      font-family: monospace;
-      text-shadow: 0 0 10px rgba(0, 190, 255, 0.5);
+    .action-btn {
+      margin-top: 25px;
+      background: #30363d;
+      border: 1px solid rgba(240, 246, 252, 0.1);
+      padding: 10px 28px;
+      color: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
     }
-
-    #combo-display {
-      position: absolute;
-      top: 100px;
-      width: 100%;
-      text-align: center;
-      font-size: 2.5rem;
-      font-weight: 900;
-      opacity: 0;
-      transition: opacity 0.2s, transform 0.1s;
-      pointer-events: none;
-    }
-
-    #judgment-popup {
-      position: absolute;
-      top: 45%;
-      width: 100%;
-      text-align: center;
-      font-size: 2rem;
-      font-weight: 800;
-      pointer-events: none;
-      opacity: 0;
-      transform: translateY(-50%) scale(0.8);
-      transition: opacity 0.15s, transform 0.15s;
-    }
-
-    /* Summary Modal */
-    #summary-modal {
-      position: absolute;
-      inset: 0;
-      background: rgba(13, 15, 24, 0.92);
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 20;
-    }
-
-    .rank-title {
-      font-size: 6rem;
-      font-weight: 900;
-      margin-bottom: 10px;
-      text-shadow: 0 0 30px currentColor;
-    }
-
-    .final-score {
-      font-size: 2.5rem;
-      font-family: monospace;
-      margin-bottom: 20px;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      text-align: center;
-      margin-bottom: 30px;
-    }
-
-    .stat-item h4 {
-      font-size: 0.9rem;
-      color: #718096;
-    }
-
-    .stat-item p {
-      font-size: 1.5rem;
-      font-weight: bold;
+    .action-btn:hover {
+      background: #38404a;
     }
   </style>
 </head>
 <body>
 
-  <!-- Left Control Sidebar -->
-  <div id="sidebar">
-    <h2>JR AI Chart Simulator</h2>
-    
-    <label for="chart-input" style="font-size: 0.85rem;">Input Chart JSON:</label>
-    <textarea id="chart-input" placeholder="Paste your Phira/Phigros chart JSON here..."></textarea>
-
-    <div class="btn-group">
-      <button class="btn-primary" onclick="loadAndPlay()">Play Chart</button>
-      <button class="btn-secondary" onclick="loadSampleChart()">Sample JSON</button>
-    </div>
-
-    <div class="btn-group">
-      <button class="btn-secondary" id="autoplay-btn" onclick="toggleAutoplay()">Autoplay: OFF</button>
-    </div>
-
-    <div class="legend">
-      <p><span style="color:var(--accent-blue);">● Tap (Blue):</span> Single hit on timing</p>
-      <p><span style="color:var(--accent-yellow);">● Drag (Yellow):</span> Pass over judgment line</p>
-      <p><span style="color:var(--accent-red);">● Flick (Red):</span> Hit & swipe direction</p>
-      <p><span style="color:var(--accent-green);">❚ Hold (Long):</span> Hold down duration</p>
-    </div>
-
-    <div class="key-hint">
-      <strong>Keyboard Controls:</strong> D, F, J, K keys trigger judgment line zones.
+  <!-- Loading & File Selection Screen -->
+  <div id="loader-overlay">
+    <div class="card">
+      <div class="title">PHIRA WEB CORE</div>
+      <div class="desc">Upload official or community Phira/Phigros chart pack (<code>.zip</code> format containing chart JSON, audio, and background).</div>
+      <label class="file-btn">
+        Select Chart .zip
+        <input type="file" id="zip-input" accept=".zip" />
+      </label>
+      <div id="status-msg"></div>
     </div>
   </div>
 
-  <!-- Right Game Canvas -->
-  <div id="game-container">
-    <canvas id="gameCanvas"></canvas>
-
-    <div id="hud">
-      <div id="status-display">READY</div>
-      <div id="score-display">0000000</div>
-    </div>
-
-    <div id="combo-display">0 <span style="font-size: 1rem; font-weight: normal;">COMBO</span></div>
-    <div id="judgment-popup">PERFECT</div>
-
-    <!-- Summary Screen -->
-    <div id="summary-modal">
-      <div class="rank-title" id="rank-display">PHI</div>
-      <div class="final-score" id="final-score-display">1000000</div>
-      <div class="stats-grid">
-        <div class="stat-item"><h4 style="color: #00e676;">PERFECT</h4><p id="count-perfect">0</p></div>
-        <div class="stat-item"><h4 style="color: #ffe600;">GOOD</h4><p id="count-good">0</p></div>
-        <div class="stat-item"><h4 style="color: #ff3b3b;">MISS</h4><p id="count-miss">0</p></div>
+  <!-- Game Settlement (Result) Screen -->
+  <div id="settle-overlay">
+    <div class="settle-box">
+      <div style="font-size: 20px; letter-spacing: 2px; color: #8b949e;">STAGE CLEAR</div>
+      <div class="rank-text" id="res-grade">φ</div>
+      <div style="font-size: 36px; font-weight: 700; margin-bottom: 10px;" id="res-score">1000000</div>
+      <div class="score-detail">
+        <div class="stat-row"><span>Perfect</span><span id="res-perf" style="color: #ffe57f;">0</span></div>
+        <div class="stat-row"><span>Good</span><span id="res-good" style="color: #80d8ff;">0</span></div>
+        <div class="stat-row"><span>Bad</span><span id="res-bad" style="color: #ff5252;">0</span></div>
+        <div class="stat-row"><span>Miss</span><span id="res-miss" style="color: #9e9e9e;">0</span></div>
+        <div class="stat-row"><span>Max Combo</span><span id="res-combo">0</span></div>
+        <div class="stat-row"><span>Accuracy</span><span id="res-acc">100.00%</span></div>
       </div>
-      <button class="btn-primary" style="width: 200px;" onclick="closeSummary()">Retry</button>
+      <button class="action-btn" onclick="location.reload()">Load Another Chart</button>
     </div>
+  </div>
+
+  <!-- Render Canvas -->
+  <div id="canvas-container">
+    <canvas id="game-canvas"></canvas>
   </div>
 
   <script>
-    const canvas = document.getElementById('gameCanvas');
+    /**
+     * PHIRA / PHIGROS SIMULATOR ENGINE CORE
+     * Standard implementation matching formatVersion 3
+     */
+
+    const canvas = document.getElementById('game-canvas');
     const ctx = canvas.getContext('2d');
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
 
-    // Game state
-    let chartData = null;
-    let notes = [];
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    // Web Audio State
+    let audioCtx = null;
+    let audioBuffer = null;
+    let audioSource = null;
+    let audioStartTime = 0;
     let isPlaying = false;
-    let startTime = 0;
-    let autoPlay = false;
+    let songDuration = 0;
 
-    // Scoring & Stats
-    let totalNotes = 0;
-    let currentScore = 0;
+    // Game Chart Data
+    let chartData = null;
+    let bgImage = new Image();
+    let bgLoaded = false;
+
+    // Gameplay Metrics & Counters
+    let score = 0;
     let combo = 0;
+    let maxCombo = 0;
     let perfectCount = 0;
     let goodCount = 0;
+    let badCount = 0;
     let missCount = 0;
+    let totalNotes = 0;
 
-    // Layout configuration
-    const LINE_Y_RATIO = 0.75; // Judgment line relative height
-    const NOTE_SPEED = 600; // Pixels per second
-    const TRACK_WIDTH = 400; // Visual track span
+    // Judge Timings (seconds)
+    const JUDGE_PERFECT = 0.08;
+    const JUDGE_GOOD = 0.16;
+    const JUDGE_BAD = 0.20;
 
-    function resizeCanvas() {
-      canvas.width = canvas.parentElement.clientWidth;
-      canvas.height = canvas.parentElement.clientHeight;
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    // Interactive Touch Tracking
+    const activeTouches = new Map();
 
-    // Default Sample Chart JSON
-    const defaultChart = {
-      "bpm": 128,
-      "notes": [
-        { "type": "tap", "time": 1.0, "positionX": -0.6 },
-        { "type": "drag", "time": 1.5, "positionX": -0.2 },
-        { "type": "flick", "time": 2.0, "positionX": 0.2 },
-        { "type": "hold", "time": 2.5, "duration": 1.5, "positionX": 0.6 },
-        { "type": "tap", "time": 4.2, "positionX": -0.4 },
-        { "type": "tap", "time": 4.4, "positionX": 0.4 },
-        { "type": "drag", "time": 4.8, "positionX": 0.0 },
-        { "type": "flick", "time": 5.2, "positionX": -0.5 },
-        { "type": "hold", "time": 5.8, "duration": 2.0, "positionX": 0.0 }
-      ]
-    };
-
-    function loadSampleChart() {
-      document.getElementById('chart-input').value = JSON.stringify(defaultChart, null, 2);
-    }
-    loadSampleChart();
-
-    function toggleAutoplay() {
-      autoPlay = !autoPlay;
-      document.getElementById('autoplay-btn').innerText = `Autoplay: ${autoPlay ? 'ON' : 'OFF'}`;
+    function setStatus(text) {
+      document.getElementById('status-msg').innerText = text;
     }
 
-    // Chart Parsing Engine
-    function parseChart(jsonText) {
+    // Zip File Upload and Extraction
+    document.getElementById('zip-input').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      setStatus('Extracting chart bundle...');
       try {
-        const raw = JSON.parse(jsonText);
-        if (!raw.notes || !Array.isArray(raw.notes)) {
-          throw new Error("Invalid format: 'notes' array is missing.");
+        const zip = await JSZip.loadAsync(file);
+        let chartFile = null;
+        let audioFile = null;
+        let imageFile = null;
+
+        // Traverse archive files
+        for (const [relativePath, zipEntry] of Object.entries(zip.files)) {
+          if (zipEntry.dir) continue;
+          const lower = relativePath.toLowerCase();
+          if (lower.endsWith('.json') || lower.endsWith('.csv') || lower.endsWith('.txt')) {
+            if (!chartFile || lower.includes('chart')) chartFile = zipEntry;
+          } else if (lower.endsWith('.mp3') || lower.endsWith('.ogg') || lower.endsWith('.wav')) {
+            audioFile = zipEntry;
+          } else if (lower.endsWith('.jpg') || lower.endsWith('.png') || lower.endsWith('.jpeg')) {
+            imageFile = zipEntry;
+          }
         }
 
-        const parsedNotes = raw.notes.map((n, index) => ({
-          id: index,
-          type: n.type, // 'tap', 'drag', 'flick', 'hold'
-          time: Number(n.time),
-          duration: n.duration ? Number(n.duration) : 0,
-          positionX: Number(n.positionX || 0), // Normalized -1.0 to 1.0
-          hit: false,
-          judged: false,
-          holding: false,
-          holdProgress: 0
-        })).sort((a, b) => a.time - b.time);
+        if (!chartFile || !audioFile) {
+          throw new Error('Missing chart JSON or audio stream inside archive.');
+        }
 
-        return { bpm: raw.bpm || 120, notes: parsedNotes };
+        // 1. Parse Chart JSON
+        setStatus('Parsing chart data...');
+        const chartJsonStr = await chartFile.async('string');
+        chartData = JSON.parse(chartJsonStr);
+        preprocessChart(chartData);
+
+        // 2. Decode Audio
+        setStatus('Decoding audio assets...');
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const audioData = await audioFile.async('arraybuffer');
+        audioBuffer = await audioCtx.decodeAudioData(audioData);
+        songDuration = audioBuffer.duration;
+
+        // 3. Load Background
+        if (imageFile) {
+          const imgBlob = await imageFile.async('blob');
+          bgImage.src = URL.createObjectURL(imgBlob);
+          bgImage.onload = () => { bgLoaded = true; };
+        }
+
+        // Ready to Launch
+        document.getElementById('loader-overlay').style.display = 'none';
+        startGame();
+
       } catch (err) {
-        alert("JSON Parsing Error: " + err.message);
-        return null;
-      }
-    }
-
-    function loadAndPlay() {
-      const text = document.getElementById('chart-input').value;
-      const parsed = parseChart(text);
-      if (!parsed) return;
-
-      chartData = parsed;
-      notes = chartData.notes;
-      totalNotes = notes.length;
-
-      if (totalNotes === 0) {
-        alert("The chart contains no notes.");
-        return;
-      }
-
-      // Reset score state
-      currentScore = 0;
-      combo = 0;
-      perfectCount = 0;
-      goodCount = 0;
-      missCount = 0;
-      
-      updateHUD();
-      document.getElementById('summary-modal').style.display = 'none';
-
-      isPlaying = true;
-      startTime = performance.now();
-      requestAnimationFrame(gameLoop);
-    }
-
-    // Input listeners
-    const activeKeys = new Set();
-    window.addEventListener('keydown', (e) => {
-      if (e.repeat) return;
-      const k = e.key.toLowerCase();
-      if (['d', 'f', 'j', 'k'].includes(k)) {
-        activeKeys.add(k);
-        handlePlayerHit();
+        console.error(err);
+        setStatus('Error parsing package: ' + err.message);
       }
     });
 
-    window.addEventListener('keyup', (e) => {
-      activeKeys.delete(e.key.toLowerCase());
-    });
+    /**
+     * Parse Official Phigros formatVersion 3
+     * Precalculates absolute timestamps, floor positions, and hit counters.
+     */
+    function preprocessChart(chart) {
+      totalNotes = 0;
 
-    // Handle Note Hits
-    function handlePlayerHit() {
-      if (!isPlaying || autoPlay) return;
+      chart.judgeLineList.forEach((line) => {
+        // Pre-compute line floor position cache
+        let currentFloor = 0;
+        let lastT = 0;
+        line.speedEvents.forEach((ev) => {
+          ev.startTime = beatsToSeconds(chart, ev.startTime);
+          ev.endTime = beatsToSeconds(chart, ev.endTime);
+          ev.floorPosition = currentFloor;
+          currentFloor += (ev.endTime - ev.startTime) * ev.value;
+        });
 
-      const currentTime = (performance.now() - startTime) / 1000;
-      
-      // Find closest unjudged note
-      for (let note of notes) {
-        if (note.judged) continue;
-        
-        const diff = Math.abs(note.time - currentTime);
-        
-        if (diff <= 0.18) { // Hit window (180ms)
-          if (diff <= 0.08) {
-            triggerJudgment(note, "PERFECT");
-          } else {
-            triggerJudgment(note, "GOOD");
-          }
+        // Convert events timing to seconds
+        line.judgeLineMoveEvents.forEach(ev => {
+          ev.startTime = beatsToSeconds(chart, ev.startTime);
+          ev.endTime = beatsToSeconds(chart, ev.endTime);
+        });
+        line.judgeLineRotateEvents.forEach(ev => {
+          ev.startTime = beatsToSeconds(chart, ev.startTime);
+          ev.endTime = beatsToSeconds(chart, ev.endTime);
+        });
+        line.judgeLineDisappearEvents.forEach(ev => {
+          ev.startTime = beatsToSeconds(chart, ev.startTime);
+          ev.endTime = beatsToSeconds(chart, ev.endTime);
+        });
+
+        // Parse Notes (Above & Below Lines)
+        const parseNoteList = (notes, isAbove) => {
+          notes.forEach(note => {
+            totalNotes++;
+            note.time = beatsToSeconds(chart, note.time);
+            note.holdTime = beatsToSeconds(chart, note.holdTime);
+            note.isAbove = isAbove;
+            note.state = 'PENDING'; // PENDING, PERFECT, GOOD, BAD, MISS
+            note.evaluated = false;
+            note.holdProgress = 0;
+          });
+        };
+
+        if (line.notesAbove) parseNoteList(line.notesAbove, true);
+        if (line.notesBelow) parseNoteList(line.notesBelow, false);
+      });
+    }
+
+    // Convert BPM beat intervals to absolute seconds
+    function beatsToSeconds(chart, beat) {
+      let time = 0;
+      let curBeat = 0;
+      const bpmList = chart.BPMList;
+
+      for (let i = 0; i < bpmList.length; i++) {
+        const cur = bpmList[i];
+        const next = bpmList[i + 1];
+        const segBeat = (next && beat > next.startTime ? next.startTime : beat) - cur.startTime;
+        if (segBeat > 0) {
+          time += (segBeat * 60.0) / cur.bpm;
+        }
+        if (next && beat >= next.startTime) {
+          continue;
+        } else {
           break;
         }
       }
+      return time;
     }
 
-    function triggerJudgment(note, result) {
-      note.judged = true;
-      note.hit = true;
+    function startGame() {
+      audioStartTime = audioCtx.currentTime + 0.5; // Half second delay for layout stabilization
+      audioSource = audioCtx.createBufferSource();
+      audioSource.buffer = audioBuffer;
+      audioSource.connect(audioCtx.destination);
+      audioSource.start(audioStartTime);
+      isPlaying = true;
+      requestAnimationFrame(renderLoop);
+    }
 
-      const singleNoteMaxScore = 1000000 / totalNotes;
+    // Evaluate interpolation for dynamic events
+    function interpolate(startTime, endTime, startVal, endVal, curTime) {
+      if (curTime <= startTime) return startVal;
+      if (curTime >= endTime) return endVal;
+      const ratio = (curTime - startTime) / (endTime - startTime);
+      return startVal + (endVal - startVal) * ratio;
+    }
 
-      if (result === "PERFECT") {
+    function getLineTransform(line, curTime) {
+      // 1. Position: default center is (0.5, 0.5)
+      let posX = 0.5, posY = 0.5;
+      for (let ev of line.judgeLineMoveEvents) {
+        if (curTime >= ev.startTime && curTime <= ev.endTime) {
+          posX = interpolate(ev.startTime, ev.endTime, ev.start, ev.end, curTime);
+          posY = interpolate(ev.startTime, ev.endTime, ev.start2, ev.end2, curTime);
+          break;
+        } else if (curTime > ev.endTime) {
+          posX = ev.end;
+          posY = ev.end2;
+        }
+      }
+
+      // 2. Rotation: in degrees
+      let angle = 0;
+      for (let ev of line.judgeLineRotateEvents) {
+        if (curTime >= ev.startTime && curTime <= ev.endTime) {
+          angle = interpolate(ev.startTime, ev.endTime, ev.start, ev.end, curTime);
+          break;
+        } else if (curTime > ev.endTime) {
+          angle = ev.end;
+        }
+      }
+
+      // 3. Alpha (Disappear)
+      let alpha = 1.0;
+      for (let ev of line.judgeLineDisappearEvents) {
+        if (curTime >= ev.startTime && curTime <= ev.endTime) {
+          alpha = interpolate(ev.startTime, ev.endTime, ev.start, ev.end, curTime);
+          break;
+        } else if (curTime > ev.endTime) {
+          alpha = ev.end;
+        }
+      }
+
+      // 4. Floor Position computation
+      let currentFloor = 0;
+      for (let ev of line.speedEvents) {
+        if (curTime >= ev.startTime && curTime <= ev.endTime) {
+          currentFloor = ev.floorPosition + (curTime - ev.startTime) * ev.value;
+          break;
+        } else if (curTime > ev.endTime) {
+          currentFloor = ev.floorPosition + (ev.endTime - ev.startTime) * ev.value;
+        }
+      }
+
+      return { x: posX * width, y: (1.0 - posY) * height, angle: -angle, alpha, floor: currentFloor };
+    }
+
+    /**
+     * Touch / Input Handling System
+     */
+    function handleTouch(x, y, isFlick = false) {
+      if (!chartData || !isPlaying) return;
+      const curTime = Math.max(0, audioCtx.currentTime - audioStartTime);
+
+      chartData.judgeLineList.forEach(line => {
+        const trans = getLineTransform(line, curTime);
+        const rad = (-trans.angle * Math.PI) / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+
+        // Convert touch coordinates to judgment line local coordinate system
+        const dx = x - trans.x;
+        const dy = y - trans.y;
+        const localX = dx * cos - dy * sin;
+
+        const checkNotes = (notes) => {
+          notes.forEach(note => {
+            if (note.state !== 'PENDING') return;
+            const dt = Math.abs(note.time - curTime);
+            // Check Hitboxes: ~120px lane width allowance
+            const noteScreenX = (note.positionX / 9) * (width * 0.6);
+            if (Math.abs(localX - noteScreenX) < 130) {
+              if (dt <= JUDGE_BAD) {
+                if (note.type === 4 && !isFlick) return; // Flick notes require flick gesture
+                
+                if (dt <= JUDGE_PERFECT) {
+                  registerHit(note, 'PERFECT');
+                } else if (dt <= JUDGE_GOOD) {
+                  registerHit(note, 'GOOD');
+                } else {
+                  registerHit(note, 'BAD');
+                }
+              }
+            }
+          });
+        };
+
+        if (line.notesAbove) checkNotes(line.notesAbove);
+        if (line.notesBelow) checkNotes(line.notesBelow);
+      });
+    }
+
+    function registerHit(note, rating) {
+      note.state = rating;
+      note.evaluated = true;
+      if (rating === 'PERFECT') {
         perfectCount++;
         combo++;
-        currentScore += singleNoteMaxScore;
-      } else if (result === "GOOD") {
+      } else if (rating === 'GOOD') {
         goodCount++;
         combo++;
-        currentScore += singleNoteMaxScore * 0.65;
-      } else { // MISS
+      } else if (rating === 'BAD') {
+        badCount++;
+        combo = 0;
+      } else {
         missCount++;
         combo = 0;
       }
-
-      showPopup(result);
-      updateHUD();
+      if (combo > maxCombo) maxCombo = combo;
+      recalculateScore();
     }
 
-    function showPopup(text) {
-      const el = document.getElementById('judgment-popup');
-      el.innerText = text;
-      el.style.color = text === 'PERFECT' ? '#00e676' : (text === 'GOOD' ? '#ffe600' : '#ff3b3b');
-      el.style.opacity = '1';
-      el.style.transform = 'translateY(-50%) scale(1.1)';
-
-      setTimeout(() => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(-50%) scale(0.8)';
-      }, 300);
+    function recalculateScore() {
+      if (totalNotes === 0) return;
+      // Phigros Score = (0.9 * Base Score) + (0.1 * Combo Score)
+      const noteScore = (perfectCount * 1.0 + goodCount * 0.65) / totalNotes;
+      const comboRatio = maxCombo / totalNotes;
+      score = Math.round((noteScore * 900000) + (comboRatio * 100000));
     }
 
-    function updateHUD() {
-      document.getElementById('score-display').innerText = Math.round(currentScore).toString().padStart(7, '0');
-      
-      const comboEl = document.getElementById('combo-display');
-      if (combo > 2) {
-        comboEl.style.opacity = '1';
-        comboEl.childNodes[0].nodeValue = combo + " ";
-      } else {
-        comboEl.style.opacity = '0';
+    // Screen Touch Listeners
+    canvas.addEventListener('pointerdown', (e) => {
+      activeTouches.set(e.pointerId, { startX: e.clientX, startY: e.clientY, curX: e.clientX, curY: e.clientY, time: Date.now() });
+      handleTouch(e.clientX, e.clientY, false);
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!activeTouches.has(e.pointerId)) return;
+      const t = activeTouches.get(e.pointerId);
+      const deltaDist = Math.hypot(e.clientX - t.startX, e.clientY - t.startY);
+      const deltaTime = Date.now() - t.time;
+
+      // Detect high velocity motion as a Flick
+      if (deltaDist > 25 && deltaTime < 180) {
+        handleTouch(e.clientX, e.clientY, true);
       }
-    }
+      t.curX = e.clientX;
+      t.curY = e.clientY;
+    });
 
-    // Main Rendering & Game Loop
-    function gameLoop(timestamp) {
+    canvas.addEventListener('pointerup', (e) => activeTouches.delete(e.pointerId));
+    canvas.addEventListener('pointercancel', (e) => activeTouches.delete(e.pointerId));
+
+    /**
+     * Primary Render & Physics Loop
+     */
+    function renderLoop() {
       if (!isPlaying) return;
+      const curTime = Math.max(0, audioCtx.currentTime - audioStartTime);
 
-      const currentTime = (timestamp - startTime) / 1000;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const lineY = canvas.height * LINE_Y_RATIO;
-      const centerX = canvas.width / 2;
-
-      // Draw Judgment Line
-      ctx.beginPath();
-      ctx.moveTo(centerX - TRACK_WIDTH / 2, lineY);
-      ctx.lineTo(centerX + TRACK_WIDTH / 2, lineY);
-      ctx.strokeStyle = '#00beff';
-      ctx.lineWidth = 4;
-      ctx.shadowBlur = 12;
-      ctx.shadowColor = '#00beff';
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      let remainingNotes = 0;
-
-      // Render Notes
-      for (let note of notes) {
-        if (note.judged && note.type !== 'hold') continue;
-        if (note.type === 'hold' && note.time + note.duration < currentTime) {
-          if (!note.judged) triggerJudgment(note, "MISS");
-          continue;
-        }
-
-        remainingNotes++;
-
-        const noteX = centerX + (note.positionX * (TRACK_WIDTH / 2));
-        const timeDiff = note.time - currentTime;
-        const noteY = lineY - (timeDiff * NOTE_SPEED);
-
-        // Autoplay Logic
-        if (autoPlay && !note.judged && timeDiff <= 0) {
-          triggerJudgment(note, "PERFECT");
-        }
-
-        // Miss check for passed notes
-        if (!autoPlay && !note.judged && timeDiff < -0.18 && note.type !== 'hold') {
-          triggerJudgment(note, "MISS");
-          continue;
-        }
-
-        // Render based on Note Type
-        drawNote(ctx, note, noteX, noteY, lineY, timeDiff, currentTime);
-      }
-
-      // Check for End of Song
-      const lastNote = notes[notes.length - 1];
-      const endTime = lastNote ? lastNote.time + (lastNote.duration || 0) + 1.5 : 0;
-
-      if (currentTime > endTime || remainingNotes === 0) {
-        endGame();
+      // Check for chart completion
+      if (curTime > songDuration + 1.5) {
+        showSettlement();
         return;
       }
 
-      requestAnimationFrame(gameLoop);
+      ctx.clearRect(0, 0, width, height);
+
+      // 1. Draw Background (dimmed & blurred)
+      if (bgLoaded) {
+        ctx.save();
+        ctx.filter = 'brightness(0.35) blur(12px)';
+        ctx.drawImage(bgImage, 0, 0, width, height);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = '#0a0d14';
+        ctx.fillRect(0, 0, width, height);
+      }
+
+      // 2. Iterate and Render Judgment Lines & Notes
+      if (chartData) {
+        chartData.judgeLineList.forEach((line) => {
+          const trans = getLineTransform(line, curTime);
+          if (trans.alpha <= 0.001) return;
+
+          ctx.save();
+          ctx.translate(trans.x, trans.y);
+          ctx.rotate((trans.angle * Math.PI) / 180);
+          ctx.globalAlpha = Math.max(0, Math.min(1, trans.alpha));
+
+          // Draw Judgment Line (Standard Phigros glow bar)
+          const lineLength = width * 2.5; // Infinite beam span
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.moveTo(-lineLength, 0);
+          ctx.lineTo(lineLength, 0);
+          ctx.stroke();
+
+          // Render Attached Notes
+          const renderNotes = (notes, isAbove) => {
+            const sideFactor = isAbove ? 1 : -1;
+
+            notes.forEach((note) => {
+              if (note.state !== 'PENDING') return;
+
+              // Compute Y distance offset via speed integral / time delta
+              const timeOffset = note.time - curTime;
+              const yOffset = -timeOffset * (height * 0.75) * note.speed * sideFactor;
+              const xOffset = (note.positionX / 9) * (width * 0.6);
+
+              // Missing window test
+              if (timeOffset < -JUDGE_BAD) {
+                registerHit(note, 'MISS');
+                return;
+              }
+
+              // Auto-hit check for Drag notes
+              if (note.type === 2 && Math.abs(timeOffset) <= JUDGE_GOOD) {
+                registerHit(note, 'PERFECT');
+                return;
+              }
+
+              // Draw Note by Type (1: Tap, 2: Drag, 3: Hold, 4: Flick)
+              drawNote(ctx, xOffset, yOffset, note, sideFactor);
+            });
+          };
+
+          if (line.notesAbove) renderNotes(line.notesAbove, true);
+          if (line.notesBelow) renderNotes(line.notesBelow, false);
+
+          ctx.restore();
+        });
+      }
+
+      // 3. Render In-Game HUD
+      renderHUD(curTime);
+
+      requestAnimationFrame(renderLoop);
     }
 
-    function drawNote(ctx, note, x, y, lineY, timeDiff, currentTime) {
+    /**
+     * High-Precision Note Rendering
+     */
+    function drawNote(ctx, x, y, note, sideFactor) {
+      const w = width * 0.09;
+      const h = 10;
+
       ctx.save();
+      ctx.translate(x, y);
 
-      if (note.type === 'tap') {
-        // Blue Note
-        ctx.fillStyle = '#00beff';
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = '#00beff';
-        ctx.fillRect(x - 35, y - 8, 70, 16);
-      } 
-      else if (note.type === 'drag') {
-        // Yellow Note
-        ctx.fillStyle = '#ffe600';
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = '#ffe600';
-        ctx.beginPath();
-        ctx.arc(x, y, 12, 0, Math.PI * 2);
-        ctx.fill();
-      } 
-      else if (note.type === 'flick') {
-        // Red Note with Arrow
-        ctx.fillStyle = '#ff3b3b';
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = '#ff3b3b';
-        ctx.fillRect(x - 35, y - 8, 70, 16);
-        
-        // Arrow
-        ctx.beginPath();
-        ctx.moveTo(x - 15, y - 12);
-        ctx.lineTo(x, y - 24);
-        ctx.lineTo(x + 15, y - 12);
-        ctx.strokeStyle = '#ff3b3b';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-      } 
-      else if (note.type === 'hold') {
-        // Green Long Note
-        const durationHeight = note.duration * NOTE_SPEED;
-        const holdTopY = y - durationHeight;
-        
-        const renderBottomY = Math.min(y, lineY);
-        const renderTopY = holdTopY;
-        const currentHoldHeight = Math.max(0, renderBottomY - renderTopY);
+      switch (note.type) {
+        case 1: // Tap Note (Cyan)
+          ctx.fillStyle = '#79c0ff';
+          ctx.fillRect(-w / 2, -h / 2, w, h);
+          ctx.strokeStyle = '#c8e1ff';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(-w / 2, -h / 2, w, h);
+          break;
 
-        if (currentHoldHeight > 0) {
-          ctx.fillStyle = 'rgba(0, 230, 118, 0.4)';
-          ctx.strokeStyle = '#00e676';
-          ctx.lineWidth = 2;
-          ctx.fillRect(x - 25, renderTopY, 50, currentHoldHeight);
-          ctx.strokeRect(x - 25, renderTopY, 50, currentHoldHeight);
-        }
+        case 2: // Drag Note (Gold diamond)
+          ctx.fillStyle = '#ffe57f';
+          ctx.beginPath();
+          ctx.moveTo(0, -h * 1.2);
+          ctx.lineTo(w * 0.35, 0);
+          ctx.lineTo(0, h * 1.2);
+          ctx.lineTo(-w * 0.35, 0);
+          ctx.closePath();
+          ctx.fill();
+          break;
 
-        // Hold Head
-        if (timeDiff > 0) {
-          ctx.fillStyle = '#00e676';
-          ctx.fillRect(x - 30, y - 8, 60, 16);
-        }
+        case 3: // Hold Note (Long Ribbon)
+          const holdHeight = (note.holdTime * (height * 0.75) * note.speed) * sideFactor;
+          ctx.fillStyle = 'rgba(121, 192, 255, 0.45)';
+          ctx.fillRect(-w / 2, 0, w, -holdHeight);
+          // Hold Head
+          ctx.fillStyle = '#79c0ff';
+          ctx.fillRect(-w / 2, -h / 2, w, h);
+          break;
+
+        case 4: // Flick Note (Red Chevron)
+          ctx.fillStyle = '#ff5252';
+          ctx.beginPath();
+          ctx.moveTo(-w / 2, h);
+          ctx.lineTo(0, -h);
+          ctx.lineTo(w / 2, h);
+          ctx.lineTo(0, 0);
+          ctx.closePath();
+          ctx.fill();
+          break;
       }
+      ctx.restore();
+    }
+
+    /**
+     * Render Phigros UI (Score, Combo, Pause indicator, Song progress)
+     */
+    function renderHUD(curTime) {
+      ctx.save();
+      // Score (Top Right)
+      ctx.font = '600 24px monospace';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'right';
+      ctx.fillText(score.toString().padStart(7, '0'), width - 30, 45);
+
+      // Combo Display (Center Screen)
+      if (combo >= 3) {
+        ctx.textAlign = 'center';
+        ctx.font = '700 38px sans-serif';
+        ctx.fillText(combo, width / 2, 80);
+        ctx.font = '12px sans-serif';
+        ctx.letterSpacing = '4px';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.fillText('COMBO', width / 2, 100);
+      }
+
+      // Song Progress Bar (Top)
+      const progress = Math.min(1.0, curTime / (songDuration || 1));
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.fillRect(0, 0, width, 3);
+      ctx.fillStyle = '#79c0ff';
+      ctx.fillRect(0, 0, width * progress, 3);
 
       ctx.restore();
     }
 
-    // End Game & Grade Calculation
-    function endGame() {
+    /**
+     * Settlement Display and Rank Calculation
+     */
+    function showSettlement() {
       isPlaying = false;
+      document.getElementById('settle-overlay').style.display = 'flex';
 
-      const finalScore = Math.min(1000000, Math.round(currentScore));
-      let rank = 'F';
+      // Determine Grade
+      let grade = 'False';
+      if (score === 1000000) grade = 'φ';
+      else if (score >= 960000) grade = 'V';
+      else if (score >= 920000) grade = 'S';
+      else if (score >= 880000) grade = 'A';
+      else if (score >= 820000) grade = 'B';
+      else if (score >= 700000) grade = 'C';
 
-      if (finalScore === 1000000) rank = 'PHI';
-      else if (finalScore >= 960000) rank = 'V';
-      else if (finalScore >= 920000) rank = 'S';
-      else if (finalScore >= 880000) rank = 'A';
-      else if (finalScore >= 800000) rank = 'B';
-      else if (finalScore >= 700000) rank = 'C';
-      else rank = 'F';
+      const totalHits = perfectCount + goodCount + badCount + missCount;
+      const acc = totalHits > 0 ? (((perfectCount + goodCount * 0.65) / totalHits) * 100).toFixed(2) : '100.00';
 
-      document.getElementById('rank-display').innerText = rank;
-      document.getElementById('rank-display').style.color = 
-        rank === 'PHI' ? '#00e676' : (rank === 'V' ? '#00beff' : (rank === 'S' ? '#ffe600' : '#ffffff'));
-
-      document.getElementById('final-score-display').innerText = finalScore.toString().padStart(7, '0');
-      document.getElementById('count-perfect').innerText = perfectCount;
-      document.getElementById('count-good').innerText = goodCount;
-      document.getElementById('count-miss').innerText = missCount;
-
-      document.getElementById('summary-modal').style.display = 'flex';
-    }
-
-    function closeSummary() {
-      document.getElementById('summary-modal').style.display = 'none';
+      document.getElementById('res-grade').innerText = grade;
+      document.getElementById('res-score').innerText = score.toString().padStart(7, '0');
+      document.getElementById('res-perf').innerText = perfectCount;
+      document.getElementById('res-good').innerText = goodCount;
+      document.getElementById('res-bad').innerText = badCount;
+      document.getElementById('res-miss').innerText = missCount;
+      document.getElementById('res-combo').innerText = maxCombo;
+      document.getElementById('res-acc').innerText = `${acc}%`;
     }
   </script>
 </body>
