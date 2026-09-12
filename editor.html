@@ -3,20 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Phira Pro JR - 實時錄製打擊制譜器</title>
+  <title>Phira Pro JR - 實時錄製與整譜編輯器</title>
   <style>
     :root {
-      --bg: #0d1117;
-      --panel: #161b22;
-      --border: #30363d;
-      --accent: #58a6ff;
-      --text: #f0f6fc;
-      --text-dim: #8b949e;
-      --tap-c: #79c0ff;
-      --drag-c: #ffe57f;
-      --hold-c: #56d364;
-      --flick-c: #ff7b72;
-      --recording: #f85149;
+      --bg: #090d13;
+      --panel: #131923;
+      --card: #1c2433;
+      --border: #2d3748;
+      --accent: #38bdf8;
+      --text: #f1f5f9;
+      --text-dim: #94a3b8;
+      --green: #10b981;
+      --green-hover: #059669;
+      --red: #ef4444;
+      --red-hover: #dc2626;
+      --tap-c: #38bdf8;
+      --drag-c: #facc15;
+      --hold-c: #4ade80;
+      --flick-c: #f87171;
     }
 
     * {
@@ -29,205 +33,209 @@
 
     body {
       display: flex;
+      flex-direction: column;
       height: 100vh;
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif;
       overflow: hidden;
     }
 
-    /* 左側側邊欄 */
-    .sidebar {
-      width: 330px;
-      min-width: 330px;
+    /* 頂部常駐導航列 (按鈕極其醒目) */
+    .header-nav {
+      height: 60px;
       background: var(--panel);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      z-index: 10;
-    }
-
-    .panel-header {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 2px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: space-between;
+      padding: 0 20px;
+      z-index: 100;
     }
-    .panel-header h2 {
-      font-size: 15px;
-      font-weight: 700;
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand h1 {
+      font-size: 18px;
+      font-weight: 800;
       color: var(--accent);
       letter-spacing: 1px;
     }
 
-    .scroll-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 14px;
+    .transport-bar {
       display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .box {
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px;
-    }
-
-    .box-title {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-dim);
-      margin-bottom: 8px;
-      display: flex;
-      justify-content: space-between;
       align-items: center;
+      gap: 14px;
     }
-
-    .form-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      margin-bottom: 8px;
-    }
-    .form-item:last-child { margin-bottom: 0; }
-    .form-item label {
-      font-size: 11px;
-      color: var(--text-dim);
-    }
-
-    input, select, button {
-      background: #0d1117;
-      border: 1px solid var(--border);
+    .time-badge {
+      font-family: monospace;
+      font-size: 18px;
+      font-weight: 700;
       color: #fff;
-      padding: 6px 10px;
+      background: #000;
+      padding: 6px 14px;
       border-radius: 6px;
-      font-size: 12px;
-      outline: none;
+      border: 1px solid var(--border);
+      min-width: 110px;
+      text-align: center;
     }
-    input:focus, select:focus {
-      border-color: var(--accent);
-    }
-
-    .row {
-      display: flex;
-      gap: 8px;
-    }
-    .row > * { flex: 1; }
 
     .btn {
       cursor: pointer;
-      font-weight: 600;
-      transition: background 0.15s ease;
-      text-align: center;
-      padding: 6px 10px;
-    }
-    .btn-green { background: #238636; border-color: #2ea043; color: #fff; }
-    .btn-green:hover { background: #2ea043; }
-    .btn-blue { background: #1f6feb; border-color: #388bfd; color: #fff; }
-    .btn-blue:hover { background: #388bfd; }
-    .btn-gray { background: #21262d; border-color: var(--border); color: #fff; }
-    .btn-gray:hover { background: #30363d; }
-    .btn-danger { background: #b62324; border-color: #d73a49; color: #fff; }
-    .btn-danger:hover { background: #d73a49; }
-    .btn-recording { background: var(--recording); border-color: #ff7b72; color: #fff; animation: pulse 1s infinite alternate; }
-
-    @keyframes pulse {
-      from { opacity: 0.8; }
-      to { opacity: 1; }
-    }
-
-    /* 判定線切換選項卡 */
-    .line-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      max-height: 100px;
-      overflow-y: auto;
-    }
-    .line-item {
-      padding: 6px 10px;
-      background: #0d1117;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      display: flex;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      display: inline-flex;
       align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-      font-size: 11px;
+      gap: 8px;
+      transition: all 0.2s;
     }
-    .line-item.active {
-      border-color: var(--accent);
-      background: rgba(88, 166, 255, 0.15);
+    .btn-export {
+      background: var(--green);
+      color: #fff;
+      border-color: #34d399;
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+    }
+    .btn-export:hover { background: var(--green-hover); }
+
+    .btn-record {
+      background: var(--red);
+      color: #fff;
+      border-color: #f87171;
+    }
+    .btn-record.recording {
+      animation: pulse 1s infinite alternate;
+      background: #991b1b;
+    }
+    @keyframes pulse {
+      from { box-shadow: 0 0 5px var(--red); }
+      to { box-shadow: 0 0 25px var(--red); }
     }
 
-    /* 音符檢查器面板 (Inspector) */
-    .inspector-panel {
-      border: 1px solid var(--accent);
-      background: rgba(88, 166, 255, 0.05);
+    .btn-blue { background: #0284c7; color: #fff; }
+    .btn-blue:hover { background: #0369a1; }
+    .btn-dark { background: var(--card); color: var(--text); border-color: var(--border); }
+    .btn-dark:hover { background: #283347; }
+
+    /* 主工作區 (左側即時預覽，右側整譜編輯器) */
+    .main-content {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
     }
 
-    /* 右側主工作空間 */
-    .workspace {
+    /* 左側舞台畫布 */
+    .stage-section {
       flex: 1;
       display: flex;
       flex-direction: column;
       position: relative;
+      background: #05070a;
     }
-
-    /* 頂部操作列 */
-    .top-toolbar {
-      height: 52px;
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 16px;
-      z-index: 5;
-    }
-
-    .transport {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .timer {
-      font-family: monospace;
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--accent);
-      min-width: 90px;
-    }
-
-    .mode-badge {
-      font-size: 12px;
-      padding: 4px 10px;
-      border-radius: 12px;
-      background: #21262d;
-      color: var(--text-dim);
-    }
-    .mode-badge.recording {
-      background: rgba(248, 81, 73, 0.2);
-      color: #ff7b72;
-      border: 1px solid #ff7b72;
-    }
-
-    /* 主舞台 */
     #stage-canvas {
       flex: 1;
-      background: #05070a;
+      width: 100%;
+      height: 100%;
       cursor: crosshair;
+    }
+    .stage-hint {
+      position: absolute;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.75);
+      border: 1px solid var(--border);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      color: var(--accent);
+      pointer-events: none;
+    }
+
+    /* 右側整譜編輯抽屜 (停止錄製後自動高亮展開) */
+    .editor-drawer {
+      width: 460px;
+      background: var(--panel);
+      border-left: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 10;
+    }
+    .drawer-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .drawer-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .note-counter {
+      font-size: 12px;
+      color: var(--accent);
+      background: rgba(56, 189, 248, 0.1);
+      padding: 3px 8px;
+      border-radius: 12px;
+    }
+
+    /* 整譜表格列表 */
+    .table-header {
+      display: grid;
+      grid-template-columns: 75px 85px 85px 75px 1fr;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+      background: #0f141d;
+    }
+    .note-table-scroll {
+      flex: 1;
+      overflow-y: auto;
+    }
+    .note-row {
+      display: grid;
+      grid-template-columns: 75px 85px 85px 75px 1fr;
+      padding: 8px 14px;
+      font-size: 12px;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      transition: background 0.15s;
+    }
+    .note-row:hover, .note-row.active {
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    select.cell-input, input.cell-input {
+      background: #090d13;
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 4px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      width: 100%;
+      outline: none;
+    }
+    select.cell-input:focus, input.cell-input:focus {
+      border-color: var(--accent);
     }
 
     /* 底部時間軌道 */
-    .timeline-wrap {
-      height: 110px;
-      background: #11151c;
-      border-top: 1px solid var(--border);
+    .timeline-bar {
+      height: 100px;
+      background: #0f141d;
+      border-top: 2px solid var(--border);
       position: relative;
       overflow-x: scroll;
       overflow-y: hidden;
@@ -236,160 +244,98 @@
       height: 100%;
       display: block;
     }
-
-    .bottom-status {
-      padding: 10px 14px;
-      border-top: 1px solid var(--border);
-      background: var(--panel);
-    }
   </style>
 </head>
 <body>
 
   <audio id="html5-audio" preload="auto"></audio>
 
-  <!-- 左側控制面板 -->
-  <div class="sidebar">
-    <div class="panel-header">
-      <h2>PHIRA PRO JR - 打擊錄製器</h2>
+  <!-- 頂部常駐操作列 (導出按鈕始終在右上方醒目位置) -->
+  <header class="header-nav">
+    <div class="brand">
+      <h1>PHIRA PRO JR</h1>
+      <label class="btn btn-dark" style="font-size:12px; padding:6px 12px; cursor:pointer;">
+        📁 載入音頻
+        <input type="file" id="audio-input" accept=".mp3,.ogg,.wav,audio/*" style="display:none;">
+      </label>
+      <span id="audio-status" style="font-size:12px; color:var(--text-dim);">未載入音頻 (可直接打節奏)</span>
     </div>
 
-    <div class="scroll-content">
-      <!-- 1. 音訊載入 -->
-      <div class="box">
-        <div class="box-title">1. 曲目載入</div>
-        <div class="row">
-          <div class="form-item">
-            <label>曲名</label>
-            <input type="text" id="meta-title" value="My Track">
-          </div>
-          <div class="form-item">
-            <label>BPM</label>
-            <input type="number" id="meta-bpm" value="120" step="0.1">
-          </div>
-        </div>
+    <div class="transport-bar">
+      <!-- 錄製主按鈕 -->
+      <button class="btn btn-record" id="record-btn" onclick="toggleRecordMode()">
+        ⏺ 開始跟節奏打一遍
+      </button>
 
-        <div class="form-item" style="margin-top: 6px;">
-          <div style="position: relative; overflow: hidden;">
-            <button type="button" class="btn btn-blue" id="audio-select-btn" style="width:100%;">
-              📁 選擇音頻 (MP3 / OGG)
-            </button>
-            <input type="file" id="audio-input" accept=".mp3,.ogg,.wav,audio/*" style="position:absolute;left:0;top:0;opacity:0;width:100%;height:100%;cursor:pointer;">
-          </div>
-          <div id="audio-filename" style="font-size: 11px; color: var(--accent); margin-top: 4px; word-break: break-all;">
-            未選擇音頻 (可直接無音頻測試)
-          </div>
-        </div>
-      </div>
+      <button class="btn btn-dark" onclick="togglePlay()">播放 / 暫停 (空格)</button>
+      <button class="btn btn-dark" onclick="seekTo(0)">回起點</button>
+      <div class="time-badge" id="time-display">00:00.000</div>
 
-      <!-- 2. 多判定線選擇 (打擊錄製會記錄在目前判定線上) -->
-      <div class="box">
-        <div class="box-title">
-          <span>2. 目前錄製判定線 (<span id="line-count">1</span>)</span>
-          <button class="btn btn-gray" style="padding: 2px 6px; font-size: 10px;" onclick="addNewLine()">+ 新增線</button>
-        </div>
-        <div class="line-list" id="line-list-container"></div>
-      </div>
+      <!-- 判定線切換 -->
+      <select id="active-line-select" class="btn btn-dark" onchange="changeActiveLine(this.value)">
+        <option value="0">判定線 1</option>
+      </select>
+      <button class="btn btn-dark" onclick="addNewLine()">+ 新增線</button>
 
-      <!-- 3. 音符後期修改面板 (Inspector) -->
-      <div class="box inspector-panel">
-        <div class="box-title">
-          <span style="color: var(--accent);">3. 音符屬性編輯器</span>
-          <span id="inspect-status" style="font-size: 10px; color: var(--text-dim);">未選中音符</span>
-        </div>
-
-        <div id="inspector-content" style="opacity: 0.5; pointer-events: none;">
-          <div class="row">
-            <div class="form-item">
-              <label>類型</label>
-              <select id="ins-type" onchange="updateSelectedNote()">
-                <option value="tap">TAP (單點藍鍵)</option>
-                <option value="drag">DRAG (金鍵)</option>
-                <option value="hold">HOLD (長條)</option>
-                <option value="flick">FLICK (粉滑)</option>
-              </select>
-            </div>
-            <div class="form-item">
-              <label>判定線</label>
-              <select id="ins-line" onchange="updateSelectedNoteLine()"></select>
-            </div>
-          </div>
-
-          <div class="form-item">
-            <label>落點時間 (ms)</label>
-            <input type="number" id="ins-time" step="10" onchange="updateSelectedNote()">
-          </div>
-
-          <div class="form-item">
-            <div style="display:flex; justify-content:space-between;">
-              <label>位置 X</label>
-              <span id="ins-x-val" style="font-size:11px; color:var(--accent);">0</span>
-            </div>
-            <input type="range" id="ins-x" min="-450" max="450" value="0" oninput="updateSelectedNote()">
-          </div>
-
-          <div class="row">
-            <div class="form-item">
-              <label>流速倍率</label>
-              <input type="number" id="ins-speed" value="1.0" step="0.1" min="0.2" max="10" onchange="updateSelectedNote()">
-            </div>
-            <div class="form-item">
-              <label>Hold時長(ms)</label>
-              <input type="number" id="ins-hold" value="600" step="50" onchange="updateSelectedNote()">
-            </div>
-          </div>
-
-          <div class="row" style="margin-top: 6px;">
-            <button class="btn btn-danger" onclick="deleteSelectedNote()">刪除該音符</button>
-            <button class="btn btn-gray" onclick="deselectNote()">取消選中</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 匯出 -->
-    <div class="bottom-status">
-      <button class="btn btn-green" style="width: 100%; padding: 8px 0;" onclick="exportPackage()">
-        下載 chart.json 與 info.json
+      <!-- 永久醒目的導出配置按鈕 -->
+      <button class="btn btn-export" onclick="exportPackage()">
+        ⬇ 導出配置 (chart & info)
       </button>
     </div>
-  </div>
+  </header>
 
-  <!-- 右側工作區 -->
-  <div class="workspace">
-    <!-- 頂部工具列 -->
-    <div class="top-toolbar">
-      <div class="transport">
-        <button class="btn btn-blue" id="play-btn" onclick="togglePlay()">播放 / 暫停 (空格)</button>
-        <button class="btn btn-gray" onclick="seekTo(0)">回起點</button>
-        <div class="timer" id="time-display">00:00.000</div>
+  <!-- 主工作視圖 -->
+  <main class="main-content">
+    <!-- 左側畫布 -->
+    <div class="stage-section">
+      <div class="stage-hint" id="stage-hint">
+        提示: 點擊「開始跟節奏打一遍」，在音樂播放時於白線上點擊 (或按鍵盤 D / F / J / K)
       </div>
+      <canvas id="stage-canvas"></canvas>
+    </div>
 
-      <div style="display:flex; align-items:center; gap:12px;">
-        <div class="mode-badge" id="mode-indicator">模式: 準備就緒</div>
-        <div style="font-size: 11px; color: var(--text-dim);">
-          操作指南: 播放時<b>在判定線上直接點擊</b>即可錄音符，或按鍵盤 <b>D / F / J / K</b>
+    <!-- 右側整譜編輯器 (停止錄製後自動展現全部音符以供修改) -->
+    <aside class="editor-drawer" id="editor-drawer">
+      <div class="drawer-header">
+        <div>
+          <span class="drawer-title">整譜音符編輯器</span>
+          <span class="note-counter" id="note-count-badge">0 個音符</span>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-dark" style="font-size:11px; padding:4px 8px;" onclick="batchSortNotes()">時間排序</button>
+          <button class="btn btn-dark" style="font-size:11px; padding:4px 8px; color:#f87171;" onclick="clearAllNotes()">清空全譜</button>
         </div>
       </div>
-    </div>
 
-    <!-- 主畫布 -->
-    <canvas id="stage-canvas"></canvas>
+      <div class="table-header">
+        <span>時間(ms)</span>
+        <span>音符類型</span>
+        <span>X座標</span>
+        <span>所屬線</span>
+        <span>操作</span>
+      </div>
 
-    <!-- 底部時間軸 -->
-    <div class="timeline-wrap" id="timeline-scroll">
-      <canvas id="timeline-canvas"></canvas>
-    </div>
+      <div class="note-table-scroll" id="note-table-body">
+        <!-- 音符列將自動注入此處 -->
+      </div>
+    </aside>
+  </main>
+
+  <!-- 底部時間軌道 -->
+  <div class="timeline-bar" id="timeline-scroll">
+    <canvas id="timeline-canvas"></canvas>
   </div>
 
   <script>
     /**
-     * PHIRA PRO JR - 實時錄製與細調制譜核心
+     * PHIRA PRO JR 兩階段制譜引擎
      */
     const audioElem = document.getElementById('html5-audio');
     let audioDuration = 180;
     let isPlaying = false;
+    let isRecording = false;
     let currentMs = 0;
+    let selectedNoteIndex = -1;
 
     const stageCanvas = document.getElementById('stage-canvas');
     const stageCtx = stageCanvas.getContext('2d');
@@ -405,7 +351,7 @@
       drawTimeline();
     });
 
-    // 譜面數據模型
+    // 譜面數據
     const chart = {
       offset: 0,
       lines: [
@@ -419,53 +365,69 @@
         }
       ]
     };
-
     let activeLineIndex = 0;
-    let selectedNoteRef = null; // { lineIndex, noteIndex }
 
     /**
-     * 1. 穩定音頻載入
+     * 1. 音訊載入
      */
     document.getElementById('audio-input').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
-      const label = document.getElementById('audio-filename');
-      label.innerText = `正在讀取: ${file.name} ...`;
-      label.style.color = '#ffe57f';
+      const label = document.getElementById('audio-status');
+      label.innerText = `正在讀取: ${file.name}...`;
+      label.style.color = '#facc15';
 
-      const fileUrl = URL.createObjectURL(file);
-      audioElem.src = fileUrl;
-
+      audioElem.src = URL.createObjectURL(file);
       audioElem.onloadedmetadata = () => {
         audioDuration = audioElem.duration || 180;
-        label.innerText = `✓ 已就緒: ${file.name} (${audioDuration.toFixed(1)}s)`;
-        label.style.color = '#56d364';
-        document.getElementById('audio-select-btn').innerText = '更換音頻';
+        label.innerText = `✓ 已載入: ${file.name} (${audioDuration.toFixed(1)}s)`;
+        label.style.color = '#4ade80';
         setupTimeline();
       };
       audioElem.onerror = () => {
-        label.innerText = `⚠️ 播放引擎已就緒: ${file.name}`;
-        label.style.color = '#56d364';
+        label.innerText = `✓ 已載入備用引擎: ${file.name}`;
+        label.style.color = '#4ade80';
         setupTimeline();
       };
     });
 
     function setupTimeline() {
       tlCanvas.width = Math.max(window.innerWidth, audioDuration * 100);
-      tlCanvas.height = 110;
+      tlCanvas.height = 100;
       drawTimeline();
     }
 
     /**
-     * 2. 播放 / 暫停驅動
+     * 2. 錄製模式切換 (核芯流程: 打一遍 -> 停止後直接展現整譜編輯)
      */
-    function togglePlay() {
-      if (isPlaying) {
-        pauseAudio();
-      } else {
+    function toggleRecordMode() {
+      const btn = document.getElementById('record-btn');
+      const hint = document.getElementById('stage-hint');
+
+      if (!isRecording) {
+        // 進入錄製
+        isRecording = true;
+        btn.classList.add('recording');
+        btn.innerText = '⏹ 停止錄製 (進入整譜編輯)';
+        hint.innerText = '● 正在錄製節奏中！請直接在判定線上敲擊，或按 D / F / J / K 鍵';
+        hint.style.color = '#f87171';
         playAudio();
+      } else {
+        // 停止錄製，自動將譜面呈現在右側供修改
+        isRecording = false;
+        btn.classList.remove('recording');
+        btn.innerText = '⏺ 開始跟節奏打一遍';
+        hint.innerText = '✓ 錄製完畢！右側已列出完整譜面表格，可隨時修改類型、微調時間與位置';
+        hint.style.color = '#38bdf8';
+        pauseAudio();
+        renderNoteTable(); // 立即渲染整譜表格
       }
+    }
+
+    function togglePlay() {
+      if (isPlaying) pauseAudio();
+      else playAudio();
     }
 
     function playAudio() {
@@ -475,19 +437,12 @@
       }
       isPlaying = true;
       lastTime = performance.now();
-      document.getElementById('play-btn').innerText = '暫停 (空格)';
-      document.getElementById('mode-indicator').innerText = '模式: 實時錄製中 (在線上敲擊)';
-      document.getElementById('mode-indicator').classList.add('recording');
     }
 
     function pauseAudio() {
-      if (audioElem.src) {
-        audioElem.pause();
-      }
+      if (audioElem.src) audioElem.pause();
       isPlaying = false;
-      document.getElementById('play-btn').innerText = '播放 (空格)';
-      document.getElementById('mode-indicator').innerText = '模式: 檢查與細調 (點選音符)';
-      document.getElementById('mode-indicator').classList.remove('recording');
+      renderNoteTable();
     }
 
     function seekTo(ms) {
@@ -502,17 +457,17 @@
         togglePlay();
       }
 
-      // 支援鍵盤 D / F / J / K 快速打擊錄製
+      // 錄製模式快捷打擊鍵
       if (isPlaying && ['KeyD', 'KeyF', 'KeyJ', 'KeyK'].includes(e.code)) {
-        const laneOffsets = { KeyD: -240, KeyF: -80, KeyJ: 80, KeyK: 240 };
-        recordNoteAt(laneOffsets[e.code]);
+        const laneOffsets = { KeyD: -220, KeyF: -70, KeyJ: 70, KeyK: 220 };
+        recordHit(laneOffsets[e.code]);
       }
     });
 
     /**
-     * 3. 核心打擊錄製邏輯 (點擊屏幕判定線或按鍵錄製)
+     * 3. 實時敲擊記錄音符
      */
-    function recordNoteAt(localX) {
+    function recordHit(localX) {
       const line = chart.lines[activeLineIndex] || chart.lines[0];
       const newNote = {
         type: 'tap',
@@ -523,166 +478,141 @@
       };
 
       line.notes.push(newNote);
-      line.notes.sort((a, b) => a.time - b.time);
-
-      // 選中剛敲擊下的音符，方便隨時暫停細調
-      selectedNoteRef = { lineIndex: activeLineIndex, noteIndex: line.notes.indexOf(newNote) };
-      syncInspectorUI();
       drawTimeline();
+      updateNoteCount();
     }
 
-    // 點擊畫布判定線錄製或選中音符
+    // 點擊畫布上的判定線打擊
     stageCanvas.addEventListener('mousedown', (e) => {
       const rect = stageCanvas.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
-
-      const lineY = stageH * 0.5;
       const localX = clickX - (stageW * 0.5);
 
-      if (isPlaying) {
-        // 播放中：實時錄製音符
-        recordNoteAt(localX);
-      } else {
-        // 暫停中：點選音符進行後期細調
-        checkSelectNoteAt(localX, clickY - lineY);
+      if (isPlaying || isRecording) {
+        recordHit(localX);
       }
     });
 
-    function checkSelectNoteAt(relX, relY) {
-      let found = null;
+    /**
+     * 4. 整譜表格編輯器 (核芯交互: 錄完後整齊羅列所有音符，隨時改)
+     */
+    function renderNoteTable() {
+      const body = document.getElementById('note-table-body');
+      body.innerHTML = '';
 
+      // 匯總所有判定線的音符
+      const allNotes = [];
       chart.lines.forEach((line, lIdx) => {
         line.notes.forEach((note, nIdx) => {
-          const dt = note.time - currentMs;
-          const yOffset = dt * (note.speed * (stageH * 0.0012)) * (note.isAbove ? -1 : 1);
-
-          // 碰撞測試 (寬度 80px, 高度 20px)
-          if (Math.abs(relX - note.posX) < 45 && Math.abs(relY - yOffset) < 16) {
-            found = { lineIndex: lIdx, noteIndex: nIdx };
-          }
+          allNotes.push({ ...note, lineIndex: lIdx, noteIndex: nIdx });
         });
       });
 
-      selectedNoteRef = found;
-      syncInspectorUI();
-    }
+      // 依時間先後排序顯示
+      allNotes.sort((a, b) => a.time - b.time);
+      updateNoteCount();
 
-    /**
-     * 4. 後期音符屬性編輯器 (Inspector)
-     */
-    function syncInspectorUI() {
-      const panel = document.getElementById('inspector-content');
-      const status = document.getElementById('inspect-status');
-
-      if (!selectedNoteRef) {
-        panel.style.opacity = '0.4';
-        panel.style.pointerEvents = 'none';
-        status.innerText = '未選中音符';
+      if (allNotes.length === 0) {
+        body.innerHTML = `
+          <div style="padding: 40px 20px; text-align: center; color: var(--text-dim); font-size: 13px;">
+            尚未錄製任何音符。<br>點擊上方「開始跟節奏打一遍」試聽並敲擊錄製！
+          </div>
+        `;
         return;
       }
 
-      const note = chart.lines[selectedNoteRef.lineIndex].notes[selectedNoteRef.noteIndex];
-      if (!note) {
-        selectedNoteRef = null;
-        syncInspectorUI();
-        return;
-      }
-
-      panel.style.opacity = '1';
-      panel.style.pointerEvents = 'auto';
-      status.innerText = `選中線${selectedNoteRef.lineIndex}上的音符`;
-
-      document.getElementById('ins-type').value = note.type;
-      document.getElementById('ins-time').value = note.time;
-      document.getElementById('ins-x').value = note.posX;
-      document.getElementById('ins-x-val').innerText = note.posX;
-      document.getElementById('ins-speed').value = note.speed;
-      document.getElementById('ins-hold').value = note.holdTime || 600;
-
-      // 更新判定線選框
-      const lineSelect = document.getElementById('ins-line');
-      lineSelect.innerHTML = '';
-      chart.lines.forEach((l, idx) => {
-        const opt = document.createElement('option');
-        opt.value = idx;
-        opt.innerText = l.name;
-        if (idx === selectedNoteRef.lineIndex) opt.selected = true;
-        lineSelect.appendChild(opt);
+      allNotes.forEach((noteItem, idx) => {
+        const row = document.createElement('div');
+        row.className = `note-row ${idx === selectedNoteIndex ? 'active' : ''}`;
+        row.innerHTML = `
+          <div>
+            <input type="number" class="cell-input" value="${noteItem.time}" step="10" 
+              onchange="modifyNoteTime(${noteItem.lineIndex}, ${noteItem.noteIndex}, this.value)">
+          </div>
+          <div>
+            <select class="cell-input" onchange="modifyNoteType(${noteItem.lineIndex}, ${noteItem.noteIndex}, this.value)">
+              <option value="tap" ${noteItem.type==='tap'?'selected':''}>TAP(藍)</option>
+              <option value="drag" ${noteItem.type==='drag'?'selected':''}>DRAG(金)</option>
+              <option value="hold" ${noteItem.type==='hold'?'selected':''}>HOLD(長)</option>
+              <option value="flick" ${noteItem.type==='flick'?'selected':''}>FLICK(紅)</option>
+            </select>
+          </div>
+          <div>
+            <input type="number" class="cell-input" value="${noteItem.posX}" step="10" min="-450" max="450"
+              onchange="modifyNotePos(${noteItem.lineIndex}, ${noteItem.noteIndex}, this.value)">
+          </div>
+          <div>
+            <select class="cell-input" onchange="modifyNoteLine(${noteItem.lineIndex}, ${noteItem.noteIndex}, this.value)">
+              ${chart.lines.map((l, lI) => `<option value="${lI}" ${lI===noteItem.lineIndex?'selected':''}>線 ${lI+1}</option>`).join('')}
+            </select>
+          </div>
+          <div style="display:flex; gap:4px;">
+            <button class="btn btn-dark" style="padding:2px 6px; font-size:11px;" onclick="jumpToNote(${noteItem.time})">定位</button>
+            <button class="btn btn-dark" style="padding:2px 6px; font-size:11px; color:#f87171;" onclick="deleteSingleNote(${noteItem.lineIndex}, ${noteItem.noteIndex})">刪除</button>
+          </div>
+        `;
+        body.appendChild(row);
       });
     }
 
-    function updateSelectedNote() {
-      if (!selectedNoteRef) return;
-      const note = chart.lines[selectedNoteRef.lineIndex].notes[selectedNoteRef.noteIndex];
-      if (!note) return;
-
-      note.type = document.getElementById('ins-type').value;
-      note.time = parseInt(document.getElementById('ins-time').value) || 0;
-      note.posX = parseInt(document.getElementById('ins-x').value) || 0;
-      note.speed = parseFloat(document.getElementById('ins-speed').value) || 1.0;
-      if (note.type === 'hold') {
-        note.holdTime = parseInt(document.getElementById('ins-hold').value) || 600;
-      }
-
-      document.getElementById('ins-x-val').innerText = note.posX;
-      chart.lines[selectedNoteRef.lineIndex].notes.sort((a, b) => a.time - b.time);
+    function modifyNoteTime(lIdx, nIdx, newTime) {
+      chart.lines[lIdx].notes[nIdx].time = parseInt(newTime) || 0;
       drawTimeline();
     }
 
-    function updateSelectedNoteLine() {
-      if (!selectedNoteRef) return;
-      const targetLineIdx = parseInt(document.getElementById('ins-line').value);
-      if (targetLineIdx === selectedNoteRef.lineIndex) return;
-
-      const note = chart.lines[selectedNoteRef.lineIndex].notes.splice(selectedNoteRef.noteIndex, 1)[0];
-      chart.lines[targetLineIdx].notes.push(note);
-      chart.lines[targetLineIdx].notes.sort((a, b) => a.time - b.time);
-
-      selectedNoteRef = {
-        lineIndex: targetLineIdx,
-        noteIndex: chart.lines[targetLineIdx].notes.indexOf(note)
-      };
-      syncInspectorUI();
+    function modifyNoteType(lIdx, nIdx, newType) {
+      const note = chart.lines[lIdx].notes[nIdx];
+      note.type = newType;
+      if (newType === 'hold' && !note.holdTime) note.holdTime = 600;
       drawTimeline();
     }
 
-    function deleteSelectedNote() {
-      if (!selectedNoteRef) return;
-      chart.lines[selectedNoteRef.lineIndex].notes.splice(selectedNoteRef.noteIndex, 1);
-      selectedNoteRef = null;
-      syncInspectorUI();
+    function modifyNotePos(lIdx, nIdx, newPos) {
+      chart.lines[lIdx].notes[nIdx].posX = parseInt(newPos) || 0;
       drawTimeline();
     }
 
-    function deselectNote() {
-      selectedNoteRef = null;
-      syncInspectorUI();
+    function modifyNoteLine(fromLine, nIdx, toLine) {
+      toLine = parseInt(toLine);
+      if (fromLine === toLine) return;
+      const note = chart.lines[fromLine].notes.splice(nIdx, 1)[0];
+      chart.lines[toLine].notes.push(note);
+      renderNoteTable();
+      drawTimeline();
+    }
+
+    function deleteSingleNote(lIdx, nIdx) {
+      chart.lines[lIdx].notes.splice(nIdx, 1);
+      renderNoteTable();
+      drawTimeline();
+    }
+
+    function jumpToNote(timeMs) {
+      seekTo(timeMs);
+    }
+
+    function batchSortNotes() {
+      chart.lines.forEach(line => line.notes.sort((a, b) => a.time - b.time));
+      renderNoteTable();
+      drawTimeline();
+    }
+
+    function clearAllNotes() {
+      if (!confirm('確定清空所有已錄製音符嗎？')) return;
+      chart.lines.forEach(line => line.notes = []);
+      renderNoteTable();
+      drawTimeline();
+    }
+
+    function updateNoteCount() {
+      let count = 0;
+      chart.lines.forEach(l => count += l.notes.length);
+      document.getElementById('note-count-badge').innerText = `${count} 個音符`;
     }
 
     /**
      * 5. 判定線管理
      */
-    function renderLineList() {
-      const container = document.getElementById('line-list-container');
-      container.innerHTML = '';
-      document.getElementById('line-count').innerText = chart.lines.length;
-
-      chart.lines.forEach((line, idx) => {
-        const item = document.createElement('div');
-        item.className = `line-item ${idx === activeLineIndex ? 'active' : ''}`;
-        item.innerHTML = `
-          <span>${line.name} (${line.notes.length} 音符)</span>
-          ${chart.lines.length > 1 ? `<span style="color:#ff7b72;cursor:pointer;" onclick="deleteLine(event, ${idx})">刪除</span>` : ''}
-        `;
-        item.addEventListener('click', () => {
-          activeLineIndex = idx;
-          renderLineList();
-        });
-        container.appendChild(item);
-      });
-    }
-
     function addNewLine() {
       const newId = chart.lines.length;
       chart.lines.push({
@@ -693,24 +623,25 @@
         alphaEvents: [{ startTime: 0, endTime: 500, startAlpha: 0, endAlpha: 1 }],
         notes: []
       });
+
+      const select = document.getElementById('active-line-select');
+      const opt = document.createElement('option');
+      opt.value = newId;
+      opt.innerText = `判定線 ${newId + 1}`;
+      select.appendChild(opt);
+      select.value = newId;
       activeLineIndex = newId;
-      renderLineList();
+
+      renderNoteTable();
       drawTimeline();
     }
 
-    function deleteLine(e, idx) {
-      e.stopPropagation();
-      if (chart.lines.length <= 1) return;
-      chart.lines.splice(idx, 1);
-      if (activeLineIndex >= chart.lines.length) activeLineIndex = chart.lines.length - 1;
-      selectedNoteRef = null;
-      syncInspectorUI();
-      renderLineList();
-      drawTimeline();
+    function changeActiveLine(val) {
+      activeLineIndex = parseInt(val) || 0;
     }
 
     /**
-     * 6. 核心繪製迴圈
+     * 6. 渲染引擎與主動畫循環
      */
     let lastTime = performance.now();
 
@@ -738,35 +669,32 @@
 
       const lineY = stageH * 0.5;
 
-      // 繪製判定線與音符
+      // 繪製判定線與接近音符
       chart.lines.forEach((line, idx) => {
         const isActive = (idx === activeLineIndex);
 
         stageCtx.save();
         stageCtx.translate(stageW * 0.5, lineY);
 
-        // 判定線主體
-        stageCtx.strokeStyle = isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.3)';
+        // 判定線本體
+        stageCtx.strokeStyle = isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.25)';
         stageCtx.lineWidth = isActive ? 3.5 : 2;
         stageCtx.beginPath();
         stageCtx.moveTo(-stageW, 0);
         stageCtx.lineTo(stageW, 0);
         stageCtx.stroke();
 
-        stageCtx.font = '11px sans-serif';
-        stageCtx.fillStyle = isActive ? '#58a6ff' : 'rgba(255, 255, 255, 0.35)';
-        stageCtx.fillText(line.name, -stageW * 0.46, -10);
+        stageCtx.font = '12px sans-serif';
+        stageCtx.fillStyle = isActive ? '#38bdf8' : 'rgba(255, 255, 255, 0.4)';
+        stageCtx.fillText(`${line.name}`, -stageW * 0.45, -12);
 
         // 繪製線上音符
-        line.notes.forEach((note, nIdx) => {
+        line.notes.forEach(note => {
           const dt = note.time - currentMs;
-          const side = note.isAbove ? -1 : 1;
-          const yOffset = dt * (note.speed * (stageH * 0.0012)) * side;
-
-          const isSelected = selectedNoteRef && selectedNoteRef.lineIndex === idx && selectedNoteRef.noteIndex === nIdx;
+          const yOffset = dt * (note.speed * (stageH * 0.0012)) * (note.isAbove ? -1 : 1);
 
           if (Math.abs(yOffset) < stageH * 1.5) {
-            drawNote(stageCtx, note.posX, yOffset, note, side, isSelected);
+            drawNote(stageCtx, note.posX, yOffset, note);
           }
         });
 
@@ -777,45 +705,38 @@
     }
     requestAnimationFrame(renderLoop);
 
-    function drawNote(ctx, x, y, note, side, isSelected) {
-      const nw = 68;
+    function drawNote(ctx, x, y, note) {
+      const nw = 70;
       const nh = 8;
       ctx.save();
       ctx.translate(x, y);
 
-      if (isSelected) {
-        // 選中高亮外邊框
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(-nw / 2 - 4, -nh / 2 - 4, nw + 8, nh + 8);
-      }
-
       switch (note.type) {
         case 'tap':
-          ctx.fillStyle = '#79c0ff';
+          ctx.fillStyle = '#38bdf8';
           ctx.fillRect(-nw / 2, -nh / 2, nw, nh);
-          ctx.strokeStyle = '#e6f1ff';
+          ctx.strokeStyle = '#ffffff';
           ctx.strokeRect(-nw / 2, -nh / 2, nw, nh);
           break;
         case 'drag':
-          ctx.fillStyle = '#ffe57f';
+          ctx.fillStyle = '#facc15';
           ctx.beginPath();
           ctx.moveTo(0, -nh * 1.3);
-          ctx.lineTo(nw * 0.3, 0);
+          ctx.lineTo(nw * 0.35, 0);
           ctx.lineTo(0, nh * 1.3);
-          ctx.lineTo(-nw * 0.3, 0);
+          ctx.lineTo(-nw * 0.35, 0);
           ctx.closePath();
           ctx.fill();
           break;
         case 'hold':
-          const holdLen = (note.holdTime * note.speed * (stageH * 0.0012)) * -side;
-          ctx.fillStyle = 'rgba(86, 211, 100, 0.45)';
+          const holdLen = (note.holdTime * note.speed * (stageH * 0.0012)) * -1;
+          ctx.fillStyle = 'rgba(74, 222, 128, 0.4)';
           ctx.fillRect(-nw / 2, 0, nw, holdLen);
-          ctx.fillStyle = '#56d364';
+          ctx.fillStyle = '#4ade80';
           ctx.fillRect(-nw / 2, -nh / 2, nw, nh);
           break;
         case 'flick':
-          ctx.fillStyle = '#ff7b72';
+          ctx.fillStyle = '#f87171';
           ctx.beginPath();
           ctx.moveTo(-nw / 2, nh);
           ctx.lineTo(0, -nh);
@@ -828,33 +749,30 @@
     }
 
     /**
-     * 7. 時間軸與點擊尋道
+     * 7. 底部時間軸
      */
     function drawTimeline() {
       if (!tlCanvas.width) return;
       tlCtx.clearRect(0, 0, tlCanvas.width, tlCanvas.height);
 
-      const bpm = parseFloat(document.getElementById('meta-bpm').value) || 120;
-      const beatPx = (60 / bpm) * 100;
-
       tlCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-      for (let x = 0; x < tlCanvas.width; x += beatPx) {
+      for (let x = 0; x < tlCanvas.width; x += 50) {
         tlCtx.beginPath();
         tlCtx.moveTo(x, 0);
         tlCtx.lineTo(x, tlCanvas.height);
         tlCtx.stroke();
       }
 
-      chart.lines.forEach((line, lIdx) => {
+      chart.lines.forEach(line => {
         line.notes.forEach(note => {
           const x = (note.time / 1000) * 100;
-          let color = '#79c0ff';
-          if (note.type === 'drag') color = '#ffe57f';
-          if (note.type === 'hold') color = '#56d364';
-          if (note.type === 'flick') color = '#ff7b72';
+          let color = '#38bdf8';
+          if (note.type === 'drag') color = '#facc15';
+          if (note.type === 'hold') color = '#4ade80';
+          if (note.type === 'flick') color = '#f87171';
 
           tlCtx.fillStyle = color;
-          tlCtx.fillRect(x - 2, 20, 4, tlCanvas.height - 40);
+          tlCtx.fillRect(x - 2, 15, 4, tlCanvas.height - 30);
         });
       });
     }
@@ -871,27 +789,29 @@
     });
 
     /**
-     * 8. 一鍵導出
+     * 8. 導出配置 (右上角綠色按鈕觸發)
      */
     function exportPackage() {
-      chart.lines.forEach(l => l.notes.sort((a, b) => a.time - b.time));
+      batchSortNotes();
 
       const chartData = JSON.stringify(chart, null, 2);
       const infoData = JSON.stringify({
-        title: document.getElementById('meta-title').value,
-        artist: "JR Custom",
-        bpm: parseFloat(document.getElementById('meta-bpm').value),
+        title: "JR Masterpiece",
+        artist: "JR Artist",
+        bpm: 120,
         difficulty: "IN Lv.12",
         chart: "chart.json",
         audio: "audio.mp3",
         bg: "bg.jpg"
       }, null, 2);
 
-      download(chartData, 'chart.json', 'application/json');
-      setTimeout(() => download(infoData, 'info.json', 'application/json'), 300);
+      downloadFile(chartData, 'chart.json', 'application/json');
+      setTimeout(() => {
+        downloadFile(infoData, 'info.json', 'application/json');
+      }, 300);
     }
 
-    function download(content, filename, type) {
+    function downloadFile(content, filename, type) {
       const blob = new Blob([content], { type: type });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -901,8 +821,8 @@
     }
 
     // 初始化
-    renderLineList();
     setupTimeline();
+    renderNoteTable();
   </script>
 </body>
 </html>
