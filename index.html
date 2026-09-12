@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Phira Pro JR - Web Engine</title>
+  <title>Phira Pro JR - Web Player</title>
   <style>
     * {
       box-sizing: border-box;
@@ -17,7 +17,7 @@
       height: 100%;
       overflow: hidden;
       background: #000;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif;
       color: #fff;
     }
     #game-canvas {
@@ -76,9 +76,13 @@
       font-size: 13px;
       color: #8b949e;
       background: rgba(255, 255, 255, 0.05);
-      padding: 6px 12px;
+      padding: 6px 14px;
       border-radius: 20px;
       border: 1px solid rgba(255, 255, 255, 0.1);
+      max-width: 50%;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
     }
     .song-list {
       flex: 1;
@@ -108,6 +112,13 @@
       height: 120px;
       object-fit: cover;
       background: #161b22;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #484f58;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 2px;
     }
     .song-info {
       padding: 12px;
@@ -228,7 +239,6 @@
      */
     const GITHUB_OWNER = 'zhangzhanhang855';
     const GITHUB_REPO = 'phira-pro-jr';
-    const GITHUB_BRANCH = 'main';
 
     const canvas = document.getElementById('game-canvas');
     const ctx = canvas.getContext('2d');
@@ -271,43 +281,50 @@
     const activeTouches = new Map();
 
     /**
-     * 1. Auto-synchronize and Discover charts in repository
+     * 1. Repository Synchronization with Branch & Folder Fallbacks
      */
     async function syncRepositorySongs() {
       const statusBadge = document.getElementById('sync-status');
-      const songListView = document.getElementById('song-list-view');
+      statusBadge.innerText = 'Connecting to GitHub...';
 
       try {
-        const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents?ref=${GITHUB_BRANCH}`;
-        const resp = await fetch(apiUrl);
+        // Automatically determine repository default branch (main or master)
+        const repoResp = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}`);
+        if (!repoResp.ok) {
+          throw new Error(`Repo query failed (HTTP ${repoResp.status})`);
+        }
+        const repoInfo = await repoResp.json();
+        const branch = repoInfo.default_branch || 'main';
 
-        if (!resp.ok) {
-          throw new Error(`GitHub API returned status ${resp.status}`);
+        const contentsResp = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents?ref=${branch}`);
+        if (!contentsResp.ok) {
+          throw new Error(`Directory listing failed (HTTP ${contentsResp.status})`);
         }
 
-        const entries = await resp.json();
-        const folderItems = entries.filter(e => e.type === 'dir');
+        const entries = await contentsResp.json();
+        const folders = entries.filter(e => e.type === 'dir');
 
-        if (folderItems.length === 0) {
+        if (folders.length === 0) {
           statusBadge.innerText = 'No chart folders found. Loading demo fallback...';
           renderSongCards([createDemoPackageMeta()]);
           return;
         }
 
-        statusBadge.innerText = `Synced ${folderItems.length} charts from ${GITHUB_REPO}`;
-        const songPackages = folderItems.map(item => ({
-          id: item.name,
-          title: item.name.replace(/[-_]/g, ' ').toUpperCase(),
+        statusBadge.innerText = `Synced ${folders.length} charts from ${GITHUB_REPO}`;
+
+        const songPackages = folders.map(f => ({
+          id: f.name,
+          title: f.name.replace(/[-_]/g, ' '),
           artist: 'JR Custom Track',
-          level: 'SP Lv.12',
-          basePath: `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${item.path}`
+          level: 'IN Lv.12',
+          isDemo: false,
+          basePath: `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${branch}/${encodeURIComponent(f.name)}`
         }));
 
         renderSongCards(songPackages);
-
       } catch (err) {
-        console.warn('Repository sync notice:', err.message);
-        statusBadge.innerText = 'GitHub API rate-limited or repo offline. Running demo fallback.';
+        console.warn('Sync fallback notice:', err.message);
+        statusBadge.innerText = 'GitHub API rate-limited or offline. Running demo chart.';
         renderSongCards([createDemoPackageMeta()]);
       }
     }
@@ -331,7 +348,7 @@
         const card = document.createElement('div');
         card.className = 'song-card';
         card.innerHTML = `
-          <div class="song-thumb" style="display:flex;align-items:center;justify-content:center;color:#484f58;font-size:24px;font-weight:700;">PHIRA</div>
+          <div class="song-thumb">PHIRA</div>
           <div class="song-info">
             <div class="song-name">${pkg.title}</div>
             <div class="song-artist">${pkg.artist}</div>
@@ -344,10 +361,11 @@
     }
 
     /**
-     * 2. Load Selected Song Package
+     * 2. Package Loader with Filename & Encoding Safeguards
      */
     async function loadAndStartPackage(pkg) {
-      document.getElementById('sync-status').innerText = `Loading ${pkg.title}...`;
+      const statusElem = document.getElementById('sync-status');
+      if (statusElem) statusElem.innerText = `Loading ${pkg.title}...`;
 
       try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -355,21 +373,63 @@
 
         if (pkg.isDemo) {
           setupDemoChart();
-        } else {
-          // Fetch chart.json
-          const chartResp = await fetch(`${pkg.basePath}/chart.json`);
-          activeChart = await chartResp.json();
+          preprocessActiveChart();
+          document.getElementById('select-overlay').style.display = 'none';
+          startGame();
+          return;
+        }
 
-          // Fetch audio.mp3
-          const audioResp = await fetch(`${pkg.basePath}/audio.mp3`);
-          const audioBuf = await audioResp.arrayBuffer();
-          audioBuffer = await audioCtx.decodeAudioData(audioBuf);
-          songDuration = audioBuffer.duration;
+        // Try candidate filenames safely
+        async function fetchWithFallbacks(candidateNames) {
+          for (const name of candidateNames) {
+            try {
+              const url = `${pkg.basePath}/${encodeURIComponent(name)}`;
+              const res = await fetch(url);
+              if (res.ok) return { res, name };
+            } catch (e) {}
+          }
+          return null;
+        }
 
-          // Fetch bg.jpg (Optional)
-          bgLoaded = false;
-          bgImage.src = `${pkg.basePath}/bg.jpg`;
+        // 1. Fetch info.json (optional metadata update)
+        const infoResult = await fetchWithFallbacks(['info.json', 'Info.json']);
+        if (infoResult) {
+          try {
+            const infoData = await infoResult.res.json();
+            if (infoData.title) pkg.title = infoData.title;
+            if (infoData.artist) pkg.artist = infoData.artist;
+          } catch (e) {}
+        }
+
+        // 2. Fetch chart.json
+        const chartResult = await fetchWithFallbacks(['chart.json', 'Chart.json']);
+        if (!chartResult) {
+          throw new Error(`Could not find 'chart.json' in '${pkg.id}'`);
+        }
+        const chartText = await chartResult.res.text();
+        try {
+          activeChart = JSON.parse(chartText);
+        } catch (e) {
+          throw new Error(`'chart.json' in '${pkg.id}' is not valid JSON`);
+        }
+
+        // 3. Fetch audio stream
+        const audioResult = await fetchWithFallbacks(['audio.mp3', 'song.mp3', 'audio.ogg', 'song.ogg', 'music.mp3', 'audio.wav']);
+        if (!audioResult) {
+          throw new Error(`Could not find audio file (audio.mp3 / song.mp3) in '${pkg.id}'`);
+        }
+        const audioData = await audioResult.res.arrayBuffer();
+        audioBuffer = await audioCtx.decodeAudioData(audioData);
+        songDuration = audioBuffer.duration;
+
+        // 4. Fetch background (optional)
+        const bgResult = await fetchWithFallbacks(['bg.jpg', 'bg.png', 'cover.jpg', 'illustration.jpg', 'bg.jpeg']);
+        if (bgResult) {
+          const imgBlob = await bgResult.res.blob();
+          bgImage.src = URL.createObjectURL(imgBlob);
           bgImage.onload = () => { bgLoaded = true; };
+        } else {
+          bgLoaded = false;
         }
 
         preprocessActiveChart();
@@ -377,7 +437,8 @@
         startGame();
 
       } catch (err) {
-        alert(`Failed to load song package: ${err.message}. Falling back to demo chart.`);
+        console.error(err);
+        alert(`Failed to load song package:\n${err.message}\n\nFalling back to demo chart.`);
         setupDemoChart();
         preprocessActiveChart();
         document.getElementById('select-overlay').style.display = 'none';
@@ -386,12 +447,10 @@
     }
 
     /**
-     * Synthetic Demo Chart Generator (Used when repo assets are pending)
+     * Synthetic Demo Chart
      */
     function setupDemoChart() {
-      songDuration = 22.0;
-
-      // Synthesize an electronic audio beat buffer
+      songDuration = 20.0;
       const sampleRate = audioCtx.sampleRate;
       const numSamples = Math.floor(sampleRate * songDuration);
       audioBuffer = audioCtx.createBuffer(2, numSamples, sampleRate);
@@ -400,43 +459,37 @@
 
       for (let i = 0; i < numSamples; i++) {
         const t = i / sampleRate;
-        // Kick + hihat synth rhythm
-        const kick = Math.sin(2 * Math.PI * 60 * (1 - (t % 0.5)) * (t % 0.5)) * Math.exp(- (t % 0.5) * 8);
-        const noise = (Math.random() * 2 - 1) * 0.1 * Math.exp(-((t + 0.25) % 0.5) * 20);
+        const kick = Math.sin(2 * Math.PI * 55 * (1 - (t % 0.5)) * (t % 0.5)) * Math.exp(-(t % 0.5) * 8);
+        const noise = (Math.random() * 2 - 1) * 0.08 * Math.exp(-((t + 0.25) % 0.5) * 20);
         chL[i] = chR[i] = (t % 0.5 < 0.2 ? kick : 0) + noise;
       }
 
-      // Generate custom JSON chart
       activeChart = {
         offset: 0,
         lines: [
           {
             id: 0,
             moveEvents: [
-              { startTime: 0, endTime: 3000, startX: 0.5, startY: 0.5, endX: 0.5, endY: 0.4 },
-              { startTime: 3000, endTime: 6000, startX: 0.5, startY: 0.4, endX: 0.5, endY: 0.6 },
-              { startTime: 6000, endTime: 9000, startX: 0.5, startY: 0.6, endX: 0.5, endY: 0.5 }
+              { startTime: 0, endTime: 3000, startX: 0.5, startY: 0.5, endX: 0.5, endY: 0.45 },
+              { startTime: 3000, endTime: 6000, startX: 0.5, startY: 0.45, endX: 0.5, endY: 0.55 },
+              { startTime: 6000, endTime: 9000, startX: 0.5, startY: 0.55, endX: 0.5, endY: 0.5 }
             ],
             rotateEvents: [
-              { startTime: 1000, endTime: 2500, startAngle: 0, endAngle: 18 },
-              { startTime: 2500, endTime: 4000, startAngle: 18, endAngle: -18 },
-              { startTime: 4000, endTime: 5500, startAngle: -18, endAngle: 0 }
+              { startTime: 1000, endTime: 2500, startAngle: 0, endAngle: 15 },
+              { startTime: 2500, endTime: 4000, startAngle: 15, endAngle: -15 },
+              { startTime: 4000, endTime: 5500, startAngle: -15, endAngle: 0 }
             ],
             alphaEvents: [
               { startTime: 0, endTime: 500, startAlpha: 0, endAlpha: 1 }
             ],
             notes: [
-              // Tap
               { type: 'tap', time: 1000, posX: -150, speed: 1.0, isAbove: true },
               { type: 'tap', time: 1500, posX: 150, speed: 1.0, isAbove: true },
-              // Drag
               { type: 'drag', time: 2000, posX: -100, speed: 1.0, isAbove: true },
               { type: 'drag', time: 2250, posX: 0, speed: 1.0, isAbove: true },
               { type: 'drag', time: 2500, posX: 100, speed: 1.0, isAbove: true },
-              // Hold
               { type: 'hold', time: 3200, holdTime: 1200, posX: -120, speed: 1.0, isAbove: true },
               { type: 'tap', time: 4000, posX: 120, speed: 1.0, isAbove: false },
-              // Flick
               { type: 'flick', time: 5000, posX: 0, speed: 1.2, isAbove: true }
             ]
           }
@@ -446,7 +499,7 @@
     }
 
     /**
-     * 3. Preprocess Active Chart
+     * 3. Chart Preprocessor & Engine Start
      */
     function preprocessActiveChart() {
       totalNotes = 0;
@@ -459,7 +512,7 @@
       score = 0;
 
       activeChart.lines.forEach(line => {
-        if (!line.notes) return;
+        if (!line.notes) line.notes = [];
         line.notes.forEach(note => {
           totalNotes++;
           note.state = 'PENDING';
@@ -481,8 +534,7 @@
     function interpolate(t, sT, eT, sV, eV) {
       if (t <= sT) return sV;
       if (t >= eT) return eV;
-      const progress = (t - sT) / (eT - sT);
-      return sV + (eV - sV) * progress;
+      return sV + (eV - sV) * ((t - sT) / (eT - sT));
     }
 
     function getLineState(line, curMs) {
@@ -533,7 +585,7 @@
     }
 
     /**
-     * 4. Interactive Input Handling
+     * 4. Touch & Tap Hit Registration
      */
     function triggerHitDetection(posX, posY, isFlick = false) {
       if (!isPlaying || !activeChart) return;
@@ -553,7 +605,6 @@
           if (note.state !== 'PENDING') return;
           const dt = Math.abs(note.time - curMs);
 
-          // Note hit boundary (x-axis tolerance ~100px)
           if (Math.abs(localX - note.posX) <= 100) {
             if (dt <= JUDGE_BAD) {
               if (note.type === 'flick' && !isFlick) return;
@@ -616,14 +667,13 @@
     canvas.addEventListener('pointercancel', (e) => activeTouches.delete(e.pointerId));
 
     /**
-     * 5. Game Loop & Rendering Pipeline
+     * 5. Engine Render Loop
      */
     function renderLoop() {
       if (!isPlaying) return;
       const curSec = audioCtx.currentTime - audioStartTime;
       const curMs = curSec * 1000 - (activeChart.offset || 0);
 
-      // Check chart completion
       if (curSec > songDuration + 1.2) {
         finishPlay();
         return;
@@ -631,7 +681,7 @@
 
       ctx.clearRect(0, 0, width, height);
 
-      // Background
+      // Render Background
       if (bgLoaded) {
         ctx.save();
         ctx.filter = 'brightness(0.35) blur(16px)';
@@ -642,7 +692,7 @@
         ctx.fillRect(0, 0, width, height);
       }
 
-      // Judgment Lines & Notes
+      // Render Dynamic Judgment Lines & Flowing Notes
       if (activeChart) {
         activeChart.lines.forEach(line => {
           const state = getLineState(line, curMs);
@@ -653,7 +703,7 @@
           ctx.rotate((state.angle * Math.PI) / 180);
           ctx.globalAlpha = state.alpha;
 
-          // Render Judgment Line
+          // Judgment Line Beam
           ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = 3.5;
           ctx.beginPath();
@@ -667,16 +717,14 @@
 
             const dt = note.time - curMs;
             const side = note.isAbove ? -1 : 1;
-            const speedFactor = note.speed * (height * 0.0012);
+            const speedFactor = (note.speed || 1.0) * (height * 0.0012);
             const yOffset = dt * speedFactor * side;
 
-            // Miss boundary
             if (dt < -JUDGE_BAD) {
               registerHit(note, 'MISS');
               return;
             }
 
-            // Drag auto-trigger
             if (note.type === 'drag' && Math.abs(dt) <= JUDGE_GOOD) {
               registerHit(note, 'PERFECT');
               return;
@@ -689,14 +737,12 @@
         });
       }
 
-      // In-game HUD
       drawHUD(curSec);
-
       requestAnimationFrame(renderLoop);
     }
 
     function drawNoteItem(ctx, x, y, note, side) {
-      const nw = 90;
+      const nw = 88;
       const nh = 10;
       ctx.save();
       ctx.translate(x, y);
@@ -722,7 +768,7 @@
           break;
 
         case 'hold':
-          const holdLength = (note.holdTime * note.speed * (height * 0.0012)) * -side;
+          const holdLength = (note.holdTime * (note.speed || 1.0) * (height * 0.0012)) * -side;
           ctx.fillStyle = 'rgba(121, 192, 255, 0.45)';
           ctx.fillRect(-nw / 2, 0, nw, holdLength);
           ctx.fillStyle = '#79c0ff';
@@ -730,7 +776,7 @@
           break;
 
         case 'flick':
-          ctx.fillStyle = '#ff5252';
+          ctx.fillStyle = '#ff7b72';
           ctx.beginPath();
           ctx.moveTo(-nw / 2, nh);
           ctx.lineTo(0, -nh);
@@ -745,7 +791,7 @@
 
     function drawHUD(curSec) {
       ctx.save();
-      // Score Top-Right
+      // Score (Top Right)
       ctx.font = '600 24px monospace';
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'right';
@@ -762,7 +808,7 @@
         ctx.fillText('COMBO', width / 2, 100);
       }
 
-      // Progress bar
+      // Progress Bar (Top)
       const prog = Math.min(1.0, curSec / (songDuration || 1));
       ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
       ctx.fillRect(0, 0, width, 3);
@@ -773,7 +819,7 @@
     }
 
     /**
-     * 6. Settlement & Return
+     * 6. Settlement Screen & Navigation
      */
     function finishPlay() {
       isPlaying = false;
@@ -806,7 +852,6 @@
       syncRepositorySongs();
     }
 
-    // Auto-launch sync upon opening the page
     window.addEventListener('DOMContentLoaded', () => {
       syncRepositorySongs();
     });
