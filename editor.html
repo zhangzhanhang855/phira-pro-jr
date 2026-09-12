@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Phira Pro JR - 制谱工坊 (稳定版)</title>
+  <title>Phira Pro JR - 實時錄製打擊制譜器</title>
   <style>
     :root {
       --bg: #0d1117;
@@ -16,12 +16,15 @@
       --drag-c: #ffe57f;
       --hold-c: #56d364;
       --flick-c: #ff7b72;
+      --recording: #f85149;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     body {
@@ -29,15 +32,14 @@
       height: 100vh;
       background: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       overflow: hidden;
-      user-select: none;
     }
 
-    /* 左侧控制栏 */
+    /* 左側側邊欄 */
     .sidebar {
-      width: 360px;
-      min-width: 360px;
+      width: 330px;
+      min-width: 330px;
       background: var(--panel);
       border-right: 1px solid var(--border);
       display: flex;
@@ -48,9 +50,12 @@
     .panel-header {
       padding: 14px 16px;
       border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
     .panel-header h2 {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
       color: var(--accent);
       letter-spacing: 1px;
@@ -62,7 +67,7 @@
       padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
     }
 
     .box {
@@ -76,7 +81,7 @@
       font-size: 12px;
       font-weight: 700;
       color: var(--text-dim);
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -118,6 +123,7 @@
       font-weight: 600;
       transition: background 0.15s ease;
       text-align: center;
+      padding: 6px 10px;
     }
     .btn-green { background: #238636; border-color: #2ea043; color: #fff; }
     .btn-green:hover { background: #2ea043; }
@@ -125,32 +131,22 @@
     .btn-blue:hover { background: #388bfd; }
     .btn-gray { background: #21262d; border-color: var(--border); color: #fff; }
     .btn-gray:hover { background: #30363d; }
-    .btn-orange { background: #b06000; border-color: #cf7500; color: #fff; }
+    .btn-danger { background: #b62324; border-color: #d73a49; color: #fff; }
+    .btn-danger:hover { background: #d73a49; }
+    .btn-recording { background: var(--recording); border-color: #ff7b72; color: #fff; animation: pulse 1s infinite alternate; }
 
-    /* 文件选择器 */
-    .file-btn-wrap {
-      position: relative;
-      overflow: hidden;
-      width: 100%;
-    }
-    .file-btn-wrap input[type="file"] {
-      position: absolute;
-      left: 0;
-      top: 0;
-      opacity: 0;
-      width: 100%;
-      height: 100%;
-      cursor: pointer;
+    @keyframes pulse {
+      from { opacity: 0.8; }
+      to { opacity: 1; }
     }
 
-    /* 判定线列表 */
+    /* 判定線切換選項卡 */
     .line-list {
       display: flex;
       flex-direction: column;
       gap: 6px;
-      max-height: 110px;
+      max-height: 100px;
       overflow-y: auto;
-      margin-top: 6px;
     }
     .line-item {
       padding: 6px 10px;
@@ -161,14 +157,20 @@
       align-items: center;
       justify-content: space-between;
       cursor: pointer;
-      font-size: 12px;
+      font-size: 11px;
     }
     .line-item.active {
       border-color: var(--accent);
-      background: rgba(88, 166, 255, 0.12);
+      background: rgba(88, 166, 255, 0.15);
     }
 
-    /* 右侧工作区 */
+    /* 音符檢查器面板 (Inspector) */
+    .inspector-panel {
+      border: 1px solid var(--accent);
+      background: rgba(88, 166, 255, 0.05);
+    }
+
+    /* 右側主工作空間 */
     .workspace {
       flex: 1;
       display: flex;
@@ -176,8 +178,9 @@
       position: relative;
     }
 
+    /* 頂部操作列 */
     .top-toolbar {
-      height: 50px;
+      height: 52px;
       background: var(--panel);
       border-bottom: 1px solid var(--border);
       display: flex;
@@ -190,7 +193,7 @@
     .transport {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
     .timer {
       font-family: monospace;
@@ -200,12 +203,27 @@
       min-width: 90px;
     }
 
+    .mode-badge {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: #21262d;
+      color: var(--text-dim);
+    }
+    .mode-badge.recording {
+      background: rgba(248, 81, 73, 0.2);
+      color: #ff7b72;
+      border: 1px solid #ff7b72;
+    }
+
+    /* 主舞台 */
     #stage-canvas {
       flex: 1;
       background: #05070a;
       cursor: crosshair;
     }
 
+    /* 底部時間軌道 */
     .timeline-wrap {
       height: 110px;
       background: #11151c;
@@ -220,44 +238,30 @@
     }
 
     .bottom-status {
-      padding: 12px 14px;
+      padding: 10px 14px;
       border-top: 1px solid var(--border);
       background: var(--panel);
-    }
-
-    /* 已放置音符列表预览 */
-    .note-item-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #0d1117;
-      border: 1px solid var(--border);
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      margin-bottom: 4px;
     }
   </style>
 </head>
 <body>
 
-  <!-- 隐藏的全局原生音频标签（保证100%解码成功率） -->
   <audio id="html5-audio" preload="auto"></audio>
 
-  <!-- 左侧工具栏 -->
+  <!-- 左側控制面板 -->
   <div class="sidebar">
     <div class="panel-header">
-      <h2>PHIRA PRO JR 制谱工坊</h2>
+      <h2>PHIRA PRO JR - 打擊錄製器</h2>
     </div>
 
     <div class="scroll-content">
-      <!-- 1. 音频与工程设置 -->
+      <!-- 1. 音訊載入 -->
       <div class="box">
-        <div class="box-title">1. 音频与基础信息</div>
+        <div class="box-title">1. 曲目載入</div>
         <div class="row">
           <div class="form-item">
             <label>曲名</label>
-            <input type="text" id="meta-title" value="New Song">
+            <input type="text" id="meta-title" value="My Track">
           </div>
           <div class="form-item">
             <label>BPM</label>
@@ -266,128 +270,113 @@
         </div>
 
         <div class="form-item" style="margin-top: 6px;">
-          <label>载入音频 (MP3 / OGG / WAV)</label>
-          <div class="file-btn-wrap">
-            <button type="button" class="btn btn-blue" id="audio-select-btn" style="width:100%; padding:7px 0;">
-              📁 选取本地音频文件
+          <div style="position: relative; overflow: hidden;">
+            <button type="button" class="btn btn-blue" id="audio-select-btn" style="width:100%;">
+              📁 選擇音頻 (MP3 / OGG)
             </button>
-            <input type="file" id="audio-input" accept=".mp3,.ogg,.wav,audio/*">
+            <input type="file" id="audio-input" accept=".mp3,.ogg,.wav,audio/*" style="position:absolute;left:0;top:0;opacity:0;width:100%;height:100%;cursor:pointer;">
           </div>
           <div id="audio-filename" style="font-size: 11px; color: var(--accent); margin-top: 4px; word-break: break-all;">
-            未选择音频 (可选无音频测试)
+            未選擇音頻 (可直接無音頻測試)
           </div>
         </div>
       </div>
 
-      <!-- 2. 精确音符放置面板 (用户直接定义位置与时间) -->
-      <div class="box" style="border-color: rgba(88, 166, 255, 0.4);">
-        <div class="box-title">
-          <span style="color: var(--accent);">2. 精确放置音符</span>
-          <span id="stat-note-total" style="font-size:11px; color:var(--text-dim);">已放置: 0</span>
-        </div>
-
-        <div class="row">
-          <div class="form-item">
-            <label>音符类型</label>
-            <select id="def-note-type">
-              <option value="tap">TAP (单点蓝键)</option>
-              <option value="drag">DRAG (金键)</option>
-              <option value="hold">HOLD (长条)</option>
-              <option value="flick">FLICK (粉红滑键)</option>
-            </select>
-          </div>
-          <div class="form-item">
-            <label>目标判定线</label>
-            <select id="def-target-line"></select>
-          </div>
-        </div>
-
-        <div class="form-item">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <label>落点时间 (毫秒 ms)</label>
-            <button class="btn btn-orange" style="padding: 2px 6px; font-size:10px;" onclick="grabCurrentTime()">抓取当前播放时间</button>
-          </div>
-          <input type="number" id="def-note-time" value="1000" step="50">
-        </div>
-
-        <div class="form-item">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <label>水平位置 X (落点偏移: -500 到 +500)</label>
-            <span id="x-offset-val" style="font-size:11px; color:var(--accent);">0</span>
-          </div>
-          <div class="row" style="align-items: center;">
-            <input type="range" id="def-note-x-range" min="-500" max="500" value="0" style="flex:2;" oninput="syncXFromRange(this.value)">
-            <input type="number" id="def-note-x" value="0" style="flex:1;" oninput="syncXFromInput(this.value)">
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="form-item">
-            <label>音符独立流速倍率</label>
-            <input type="number" id="def-note-speed" value="1.0" step="0.1" min="0.1" max="10.0">
-          </div>
-          <div class="form-item">
-            <label>长按时长 (Hold ms)</label>
-            <input type="number" id="def-note-hold" value="600" step="50">
-          </div>
-        </div>
-
-        <div class="form-item">
-          <label>朝向</label>
-          <select id="def-note-side">
-            <option value="above">上方接近 (正向下落)</option>
-            <option value="below">下方接近 (反向移动)</option>
-          </select>
-        </div>
-
-        <button class="btn btn-green" style="width:100%; padding:8px 0; margin-top:4px;" onclick="addDefinedNote()">
-          + 确认放置该音符
-        </button>
-      </div>
-
-      <!-- 3. 多判定线管理 -->
+      <!-- 2. 多判定線選擇 (打擊錄製會記錄在目前判定線上) -->
       <div class="box">
         <div class="box-title">
-          <span>3. 判定线管理 (<span id="line-count">1</span>)</span>
-          <button class="btn btn-blue" style="padding: 2px 8px; font-size: 11px;" onclick="addNewLine()">+ 新建判定线</button>
+          <span>2. 目前錄製判定線 (<span id="line-count">1</span>)</span>
+          <button class="btn btn-gray" style="padding: 2px 6px; font-size: 10px;" onclick="addNewLine()">+ 新增線</button>
         </div>
         <div class="line-list" id="line-list-container"></div>
       </div>
 
-      <!-- 4. 最近音符列表与删除 -->
-      <div class="box">
-        <div class="box-title">4. 音符管理 (最近5个)</div>
-        <div id="recent-notes-list" style="max-height: 120px; overflow-y: auto;">
-          <div style="font-size:11px; color:var(--text-dim);">暂无音符</div>
+      <!-- 3. 音符後期修改面板 (Inspector) -->
+      <div class="box inspector-panel">
+        <div class="box-title">
+          <span style="color: var(--accent);">3. 音符屬性編輯器</span>
+          <span id="inspect-status" style="font-size: 10px; color: var(--text-dim);">未選中音符</span>
+        </div>
+
+        <div id="inspector-content" style="opacity: 0.5; pointer-events: none;">
+          <div class="row">
+            <div class="form-item">
+              <label>類型</label>
+              <select id="ins-type" onchange="updateSelectedNote()">
+                <option value="tap">TAP (單點藍鍵)</option>
+                <option value="drag">DRAG (金鍵)</option>
+                <option value="hold">HOLD (長條)</option>
+                <option value="flick">FLICK (粉滑)</option>
+              </select>
+            </div>
+            <div class="form-item">
+              <label>判定線</label>
+              <select id="ins-line" onchange="updateSelectedNoteLine()"></select>
+            </div>
+          </div>
+
+          <div class="form-item">
+            <label>落點時間 (ms)</label>
+            <input type="number" id="ins-time" step="10" onchange="updateSelectedNote()">
+          </div>
+
+          <div class="form-item">
+            <div style="display:flex; justify-content:space-between;">
+              <label>位置 X</label>
+              <span id="ins-x-val" style="font-size:11px; color:var(--accent);">0</span>
+            </div>
+            <input type="range" id="ins-x" min="-450" max="450" value="0" oninput="updateSelectedNote()">
+          </div>
+
+          <div class="row">
+            <div class="form-item">
+              <label>流速倍率</label>
+              <input type="number" id="ins-speed" value="1.0" step="0.1" min="0.2" max="10" onchange="updateSelectedNote()">
+            </div>
+            <div class="form-item">
+              <label>Hold時長(ms)</label>
+              <input type="number" id="ins-hold" value="600" step="50" onchange="updateSelectedNote()">
+            </div>
+          </div>
+
+          <div class="row" style="margin-top: 6px;">
+            <button class="btn btn-danger" onclick="deleteSelectedNote()">刪除該音符</button>
+            <button class="btn btn-gray" onclick="deselectNote()">取消選中</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 底部导出 -->
+    <!-- 匯出 -->
     <div class="bottom-status">
-      <button class="btn btn-green" style="width:100%; padding:9px 0;" onclick="exportPackage()">
-        下载 chart.json 与 info.json
+      <button class="btn btn-green" style="width: 100%; padding: 8px 0;" onclick="exportPackage()">
+        下載 chart.json 與 info.json
       </button>
     </div>
   </div>
 
-  <!-- 右侧主预览区 -->
+  <!-- 右側工作區 -->
   <div class="workspace">
+    <!-- 頂部工具列 -->
     <div class="top-toolbar">
       <div class="transport">
-        <button class="btn btn-blue" id="play-btn" onclick="togglePlay()">播放 / 暂停 (空格)</button>
-        <button class="btn btn-gray" onclick="seekTo(0)">回到起点</button>
+        <button class="btn btn-blue" id="play-btn" onclick="togglePlay()">播放 / 暫停 (空格)</button>
+        <button class="btn btn-gray" onclick="seekTo(0)">回起點</button>
         <div class="timer" id="time-display">00:00.000</div>
       </div>
-      <div style="font-size: 12px; color: var(--text-dim);">
-        提示: 按空格试听 | 也可在画布中移动鼠标查看实时落点辅助红线
+
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div class="mode-badge" id="mode-indicator">模式: 準備就緒</div>
+        <div style="font-size: 11px; color: var(--text-dim);">
+          操作指南: 播放時<b>在判定線上直接點擊</b>即可錄音符，或按鍵盤 <b>D / F / J / K</b>
+        </div>
       </div>
     </div>
 
-    <!-- 主画布 -->
+    <!-- 主畫布 -->
     <canvas id="stage-canvas"></canvas>
 
-    <!-- 底部时间轴 -->
+    <!-- 底部時間軸 -->
     <div class="timeline-wrap" id="timeline-scroll">
       <canvas id="timeline-canvas"></canvas>
     </div>
@@ -395,13 +384,12 @@
 
   <script>
     /**
-     * PHIRA PRO JR 制谱核心逻辑 (防卡死高稳定版)
+     * PHIRA PRO JR - 實時錄製與細調制譜核心
      */
-    let audioElem = document.getElementById('html5-audio');
-    let audioDuration = 180; // 默认给3分钟无音频时间轴
+    const audioElem = document.getElementById('html5-audio');
+    let audioDuration = 180;
     let isPlaying = false;
     let currentMs = 0;
-    let animFrameId = null;
 
     const stageCanvas = document.getElementById('stage-canvas');
     const stageCtx = stageCanvas.getContext('2d');
@@ -417,13 +405,13 @@
       drawTimeline();
     });
 
-    // 谱面数据结构
+    // 譜面數據模型
     const chart = {
       offset: 0,
       lines: [
         {
           id: 0,
-          name: "判定线 1",
+          name: "判定線 1",
           moveEvents: [{ startTime: 0, endTime: 1000, startX: 0.5, startY: 0.5, endX: 0.5, endY: 0.5 }],
           rotateEvents: [{ startTime: 0, endTime: 1000, startAngle: 0, endAngle: 0 }],
           alphaEvents: [{ startTime: 0, endTime: 500, startAlpha: 0, endAlpha: 1 }],
@@ -433,49 +421,34 @@
     };
 
     let activeLineIndex = 0;
+    let selectedNoteRef = null; // { lineIndex, noteIndex }
 
     /**
-     * 1. 健壮的音频加载逻辑 (双模式保障，永不卡死)
+     * 1. 穩定音頻載入
      */
     document.getElementById('audio-input').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
-      const status = document.getElementById('audio-filename');
-      status.innerText = `正在载入: ${file.name} ...`;
-      status.style.color = '#ffe57f';
+      const label = document.getElementById('audio-filename');
+      label.innerText = `正在讀取: ${file.name} ...`;
+      label.style.color = '#ffe57f';
 
-      // 安全防挂起超时器：超过5秒自动解除等待
-      const timeoutGuard = setTimeout(() => {
-        status.innerText = `✓ 音频载入完成: ${file.name}`;
-        status.style.color = '#56d364';
+      const fileUrl = URL.createObjectURL(file);
+      audioElem.src = fileUrl;
+
+      audioElem.onloadedmetadata = () => {
+        audioDuration = audioElem.duration || 180;
+        label.innerText = `✓ 已就緒: ${file.name} (${audioDuration.toFixed(1)}s)`;
+        label.style.color = '#56d364';
+        document.getElementById('audio-select-btn').innerText = '更換音頻';
         setupTimeline();
-      }, 3000);
-
-      try {
-        const fileUrl = URL.createObjectURL(file);
-        audioElem.src = fileUrl;
-
-        audioElem.onloadedmetadata = () => {
-          clearTimeout(timeoutGuard);
-          audioDuration = audioElem.duration || 180;
-          status.innerText = `✓ 已就绪: ${file.name} (${audioDuration.toFixed(1)}s)`;
-          status.style.color = '#56d364';
-          document.getElementById('audio-select-btn').innerText = '更换音频文件';
-          setupTimeline();
-        };
-
-        audioElem.onerror = () => {
-          clearTimeout(timeoutGuard);
-          status.innerText = `⚠️ 原生播放器已启用: ${file.name}`;
-          status.style.color = '#ffe57f';
-          setupTimeline();
-        };
-      } catch (err) {
-        clearTimeout(timeoutGuard);
-        status.innerText = `❌ 读取异常: ${err.message}`;
-        status.style.color = '#ff7b72';
-      }
+      };
+      audioElem.onerror = () => {
+        label.innerText = `⚠️ 播放引擎已就緒: ${file.name}`;
+        label.style.color = '#56d364';
+        setupTimeline();
+      };
     });
 
     function setupTimeline() {
@@ -485,7 +458,7 @@
     }
 
     /**
-     * 2. 音频与时间同步驱动
+     * 2. 播放 / 暫停驅動
      */
     function togglePlay() {
       if (isPlaying) {
@@ -498,11 +471,13 @@
     function playAudio() {
       if (audioElem.src) {
         audioElem.currentTime = currentMs / 1000;
-        audioElem.play().catch(e => console.log('Audio autoplay prevented:', e));
+        audioElem.play().catch(() => {});
       }
       isPlaying = true;
-      lastTimestamp = performance.now();
-      document.getElementById('play-btn').innerText = '暂停 (空格)';
+      lastTime = performance.now();
+      document.getElementById('play-btn').innerText = '暫停 (空格)';
+      document.getElementById('mode-indicator').innerText = '模式: 實時錄製中 (在線上敲擊)';
+      document.getElementById('mode-indicator').classList.add('recording');
     }
 
     function pauseAudio() {
@@ -511,13 +486,13 @@
       }
       isPlaying = false;
       document.getElementById('play-btn').innerText = '播放 (空格)';
+      document.getElementById('mode-indicator').innerText = '模式: 檢查與細調 (點選音符)';
+      document.getElementById('mode-indicator').classList.remove('recording');
     }
 
     function seekTo(ms) {
       currentMs = Math.max(0, ms);
-      if (audioElem.src) {
-        audioElem.currentTime = currentMs / 1000;
-      }
+      if (audioElem.src) audioElem.currentTime = currentMs / 1000;
       updateTimelineScroll();
     }
 
@@ -526,106 +501,168 @@
         e.preventDefault();
         togglePlay();
       }
+
+      // 支援鍵盤 D / F / J / K 快速打擊錄製
+      if (isPlaying && ['KeyD', 'KeyF', 'KeyJ', 'KeyK'].includes(e.code)) {
+        const laneOffsets = { KeyD: -240, KeyF: -80, KeyJ: 80, KeyK: 240 };
+        recordNoteAt(laneOffsets[e.code]);
+      }
     });
 
     /**
-     * 3. 用户精确定义音符逻辑
+     * 3. 核心打擊錄製邏輯 (點擊屏幕判定線或按鍵錄製)
      */
-    function grabCurrentTime() {
-      document.getElementById('def-note-time').value = Math.round(currentMs);
-    }
-
-    function syncXFromRange(val) {
-      document.getElementById('def-note-x').value = val;
-      document.getElementById('x-offset-val').innerText = val;
-    }
-
-    function syncXFromInput(val) {
-      document.getElementById('def-note-x-range').value = val;
-      document.getElementById('x-offset-val').innerText = val;
-    }
-
-    function addDefinedNote() {
-      const type = document.getElementById('def-note-type').value;
-      const targetLineIdx = parseInt(document.getElementById('def-target-line').value) || 0;
-      const hitTime = parseInt(document.getElementById('def-note-time').value) || 0;
-      const posX = parseInt(document.getElementById('def-note-x').value) || 0;
-      const speed = parseFloat(document.getElementById('def-note-speed').value) || 1.0;
-      const holdTime = parseInt(document.getElementById('def-note-hold').value) || 0;
-      const isAbove = document.getElementById('def-note-side').value === 'above';
-
-      const line = chart.lines[targetLineIdx] || chart.lines[0];
-
+    function recordNoteAt(localX) {
+      const line = chart.lines[activeLineIndex] || chart.lines[0];
       const newNote = {
-        type: type,
-        time: hitTime,
-        posX: posX,
-        speed: speed,
-        isAbove: isAbove
+        type: 'tap',
+        time: Math.round(currentMs),
+        posX: Math.round(localX),
+        speed: 1.0,
+        isAbove: true
       };
-      if (type === 'hold') newNote.holdTime = holdTime;
 
       line.notes.push(newNote);
       line.notes.sort((a, b) => a.time - b.time);
 
-      updateStatsAndNotesList();
+      // 選中剛敲擊下的音符，方便隨時暫停細調
+      selectedNoteRef = { lineIndex: activeLineIndex, noteIndex: line.notes.indexOf(newNote) };
+      syncInspectorUI();
       drawTimeline();
     }
 
-    function updateStatsAndNotesList() {
-      let total = 0;
-      chart.lines.forEach(l => total += l.notes.length);
-      document.getElementById('stat-note-total').innerText = `已放置: ${total}`;
+    // 點擊畫布判定線錄製或選中音符
+    stageCanvas.addEventListener('mousedown', (e) => {
+      const rect = stageCanvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
 
-      const list = document.getElementById('recent-notes-list');
-      list.innerHTML = '';
+      const lineY = stageH * 0.5;
+      const localX = clickX - (stageW * 0.5);
 
-      // 提取最新的5个音符
-      const allNotes = [];
-      chart.lines.forEach((l, lIdx) => {
-        l.notes.forEach((n, nIdx) => allNotes.push({ ...n, lineIdx: lIdx, noteIdx: nIdx }));
-      });
-      allNotes.sort((a, b) => b.time - a.time);
-
-      const displayNotes = allNotes.slice(0, 5);
-      if (displayNotes.length === 0) {
-        list.innerHTML = '<div style="font-size:11px; color:var(--text-dim);">暂无音符</div>';
-        return;
+      if (isPlaying) {
+        // 播放中：實時錄製音符
+        recordNoteAt(localX);
+      } else {
+        // 暫停中：點選音符進行後期細調
+        checkSelectNoteAt(localX, clickY - lineY);
       }
+    });
 
-      displayNotes.forEach(n => {
-        const item = document.createElement('div');
-        item.className = 'note-item-row';
-        item.innerHTML = `
-          <span><b>${n.type.toUpperCase()}</b> @ ${n.time}ms (X: ${n.posX})</span>
-          <span style="color:#ff7b72; cursor:pointer;" onclick="deleteNote(${n.lineIdx}, ${n.noteIdx})">删除</span>
-        `;
-        list.appendChild(item);
+    function checkSelectNoteAt(relX, relY) {
+      let found = null;
+
+      chart.lines.forEach((line, lIdx) => {
+        line.notes.forEach((note, nIdx) => {
+          const dt = note.time - currentMs;
+          const yOffset = dt * (note.speed * (stageH * 0.0012)) * (note.isAbove ? -1 : 1);
+
+          // 碰撞測試 (寬度 80px, 高度 20px)
+          if (Math.abs(relX - note.posX) < 45 && Math.abs(relY - yOffset) < 16) {
+            found = { lineIndex: lIdx, noteIndex: nIdx };
+          }
+        });
       });
-    }
 
-    function deleteNote(lineIdx, noteIdx) {
-      if (chart.lines[lineIdx] && chart.lines[lineIdx].notes[noteIdx]) {
-        chart.lines[lineIdx].notes.splice(noteIdx, 1);
-        updateStatsAndNotesList();
-        drawTimeline();
-      }
+      selectedNoteRef = found;
+      syncInspectorUI();
     }
 
     /**
-     * 4. 判定线管理与下拉框联动
+     * 4. 後期音符屬性編輯器 (Inspector)
      */
-    function updateLineSelectDropdown() {
-      const select = document.getElementById('def-target-line');
-      select.innerHTML = '';
-      chart.lines.forEach((line, idx) => {
+    function syncInspectorUI() {
+      const panel = document.getElementById('inspector-content');
+      const status = document.getElementById('inspect-status');
+
+      if (!selectedNoteRef) {
+        panel.style.opacity = '0.4';
+        panel.style.pointerEvents = 'none';
+        status.innerText = '未選中音符';
+        return;
+      }
+
+      const note = chart.lines[selectedNoteRef.lineIndex].notes[selectedNoteRef.noteIndex];
+      if (!note) {
+        selectedNoteRef = null;
+        syncInspectorUI();
+        return;
+      }
+
+      panel.style.opacity = '1';
+      panel.style.pointerEvents = 'auto';
+      status.innerText = `選中線${selectedNoteRef.lineIndex}上的音符`;
+
+      document.getElementById('ins-type').value = note.type;
+      document.getElementById('ins-time').value = note.time;
+      document.getElementById('ins-x').value = note.posX;
+      document.getElementById('ins-x-val').innerText = note.posX;
+      document.getElementById('ins-speed').value = note.speed;
+      document.getElementById('ins-hold').value = note.holdTime || 600;
+
+      // 更新判定線選框
+      const lineSelect = document.getElementById('ins-line');
+      lineSelect.innerHTML = '';
+      chart.lines.forEach((l, idx) => {
         const opt = document.createElement('option');
         opt.value = idx;
-        opt.innerText = `${line.name} (线 ${idx})`;
-        select.appendChild(opt);
+        opt.innerText = l.name;
+        if (idx === selectedNoteRef.lineIndex) opt.selected = true;
+        lineSelect.appendChild(opt);
       });
     }
 
+    function updateSelectedNote() {
+      if (!selectedNoteRef) return;
+      const note = chart.lines[selectedNoteRef.lineIndex].notes[selectedNoteRef.noteIndex];
+      if (!note) return;
+
+      note.type = document.getElementById('ins-type').value;
+      note.time = parseInt(document.getElementById('ins-time').value) || 0;
+      note.posX = parseInt(document.getElementById('ins-x').value) || 0;
+      note.speed = parseFloat(document.getElementById('ins-speed').value) || 1.0;
+      if (note.type === 'hold') {
+        note.holdTime = parseInt(document.getElementById('ins-hold').value) || 600;
+      }
+
+      document.getElementById('ins-x-val').innerText = note.posX;
+      chart.lines[selectedNoteRef.lineIndex].notes.sort((a, b) => a.time - b.time);
+      drawTimeline();
+    }
+
+    function updateSelectedNoteLine() {
+      if (!selectedNoteRef) return;
+      const targetLineIdx = parseInt(document.getElementById('ins-line').value);
+      if (targetLineIdx === selectedNoteRef.lineIndex) return;
+
+      const note = chart.lines[selectedNoteRef.lineIndex].notes.splice(selectedNoteRef.noteIndex, 1)[0];
+      chart.lines[targetLineIdx].notes.push(note);
+      chart.lines[targetLineIdx].notes.sort((a, b) => a.time - b.time);
+
+      selectedNoteRef = {
+        lineIndex: targetLineIdx,
+        noteIndex: chart.lines[targetLineIdx].notes.indexOf(note)
+      };
+      syncInspectorUI();
+      drawTimeline();
+    }
+
+    function deleteSelectedNote() {
+      if (!selectedNoteRef) return;
+      chart.lines[selectedNoteRef.lineIndex].notes.splice(selectedNoteRef.noteIndex, 1);
+      selectedNoteRef = null;
+      syncInspectorUI();
+      drawTimeline();
+    }
+
+    function deselectNote() {
+      selectedNoteRef = null;
+      syncInspectorUI();
+    }
+
+    /**
+     * 5. 判定線管理
+     */
     function renderLineList() {
       const container = document.getElementById('line-list-container');
       container.innerHTML = '';
@@ -636,23 +673,21 @@
         item.className = `line-item ${idx === activeLineIndex ? 'active' : ''}`;
         item.innerHTML = `
           <span>${line.name} (${line.notes.length} 音符)</span>
-          ${chart.lines.length > 1 ? `<span style="color:#ff7b72; font-size:11px; cursor:pointer;" onclick="deleteLine(event, ${idx})">删除</span>` : ''}
+          ${chart.lines.length > 1 ? `<span style="color:#ff7b72;cursor:pointer;" onclick="deleteLine(event, ${idx})">刪除</span>` : ''}
         `;
         item.addEventListener('click', () => {
           activeLineIndex = idx;
-          document.getElementById('def-target-line').value = idx;
           renderLineList();
         });
         container.appendChild(item);
       });
-      updateLineSelectDropdown();
     }
 
     function addNewLine() {
       const newId = chart.lines.length;
       chart.lines.push({
         id: newId,
-        name: `判定线 ${newId + 1}`,
+        name: `判定線 ${newId + 1}`,
         moveEvents: [{ startTime: 0, endTime: 1000, startX: 0.5, startY: 0.5, endX: 0.5, endY: 0.5 }],
         rotateEvents: [{ startTime: 0, endTime: 1000, startAngle: 0, endAngle: 0 }],
         alphaEvents: [{ startTime: 0, endTime: 500, startAlpha: 0, endAlpha: 1 }],
@@ -668,18 +703,20 @@
       if (chart.lines.length <= 1) return;
       chart.lines.splice(idx, 1);
       if (activeLineIndex >= chart.lines.length) activeLineIndex = chart.lines.length - 1;
+      selectedNoteRef = null;
+      syncInspectorUI();
       renderLineList();
       drawTimeline();
     }
 
     /**
-     * 5. 渲染循环与音符动态绘制
+     * 6. 核心繪製迴圈
      */
-    let lastTimestamp = performance.now();
+    let lastTime = performance.now();
 
-    function renderLoop(timestamp) {
-      const delta = timestamp - lastTimestamp;
-      lastTimestamp = timestamp;
+    function renderLoop(now) {
+      const delta = now - lastTime;
+      lastTime = now;
 
       if (isPlaying) {
         if (audioElem.src && !audioElem.paused) {
@@ -690,7 +727,7 @@
         updateTimelineScroll();
       }
 
-      // 格式化时间
+      // 時間碼展示
       const totalSec = Math.floor(currentMs / 1000);
       const m = Math.floor(totalSec / 60).toString().padStart(2, '0');
       const s = (totalSec % 60).toString().padStart(2, '0');
@@ -699,48 +736,37 @@
 
       stageCtx.clearRect(0, 0, stageW, stageH);
 
-      // 绘制所有判定线
+      const lineY = stageH * 0.5;
+
+      // 繪製判定線與音符
       chart.lines.forEach((line, idx) => {
         const isActive = (idx === activeLineIndex);
-        const lineY = stageH * 0.5;
 
         stageCtx.save();
         stageCtx.translate(stageW * 0.5, lineY);
 
-        // 判定线本体
-        stageCtx.strokeStyle = isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.35)';
+        // 判定線主體
+        stageCtx.strokeStyle = isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.3)';
         stageCtx.lineWidth = isActive ? 3.5 : 2;
         stageCtx.beginPath();
         stageCtx.moveTo(-stageW, 0);
         stageCtx.lineTo(stageW, 0);
         stageCtx.stroke();
 
-        // 判定线标识文字
         stageCtx.font = '11px sans-serif';
-        stageCtx.fillStyle = isActive ? '#58a6ff' : 'rgba(255, 255, 255, 0.4)';
-        stageCtx.fillText(`${line.name} (ID: ${line.id})`, -stageW * 0.45, -8);
+        stageCtx.fillStyle = isActive ? '#58a6ff' : 'rgba(255, 255, 255, 0.35)';
+        stageCtx.fillText(line.name, -stageW * 0.46, -10);
 
-        // 如果是活跃线，绘制用户当前设定的落点 X 标尺辅助点
-        if (isActive) {
-          const previewX = parseInt(document.getElementById('def-note-x').value) || 0;
-          stageCtx.strokeStyle = '#ff5252';
-          stageCtx.setLineDash([4, 4]);
-          stageCtx.beginPath();
-          stageCtx.moveTo(previewX, -40);
-          stageCtx.lineTo(previewX, 40);
-          stageCtx.stroke();
-          stageCtx.setLineDash([]);
-        }
-
-        // 绘制正在接近的音符
-        line.notes.forEach(note => {
+        // 繪製線上音符
+        line.notes.forEach((note, nIdx) => {
           const dt = note.time - currentMs;
           const side = note.isAbove ? -1 : 1;
-          const speedFactor = note.speed * (stageH * 0.0012);
-          const yOffset = dt * speedFactor * side;
+          const yOffset = dt * (note.speed * (stageH * 0.0012)) * side;
+
+          const isSelected = selectedNoteRef && selectedNoteRef.lineIndex === idx && selectedNoteRef.noteIndex === nIdx;
 
           if (Math.abs(yOffset) < stageH * 1.5) {
-            drawNote(stageCtx, note.posX, yOffset, note, side);
+            drawNote(stageCtx, note.posX, yOffset, note, side, isSelected);
           }
         });
 
@@ -751,17 +777,24 @@
     }
     requestAnimationFrame(renderLoop);
 
-    function drawNote(ctx, x, y, note, side) {
+    function drawNote(ctx, x, y, note, side, isSelected) {
       const nw = 68;
       const nh = 8;
       ctx.save();
       ctx.translate(x, y);
 
+      if (isSelected) {
+        // 選中高亮外邊框
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-nw / 2 - 4, -nh / 2 - 4, nw + 8, nh + 8);
+      }
+
       switch (note.type) {
         case 'tap':
           ctx.fillStyle = '#79c0ff';
           ctx.fillRect(-nw / 2, -nh / 2, nw, nh);
-          ctx.strokeStyle = '#ffffff';
+          ctx.strokeStyle = '#e6f1ff';
           ctx.strokeRect(-nw / 2, -nh / 2, nw, nh);
           break;
         case 'drag':
@@ -775,9 +808,9 @@
           ctx.fill();
           break;
         case 'hold':
-          const holdLength = (note.holdTime * note.speed * (stageH * 0.0012)) * -side;
+          const holdLen = (note.holdTime * note.speed * (stageH * 0.0012)) * -side;
           ctx.fillStyle = 'rgba(86, 211, 100, 0.45)';
-          ctx.fillRect(-nw / 2, 0, nw, holdLength);
+          ctx.fillRect(-nw / 2, 0, nw, holdLen);
           ctx.fillStyle = '#56d364';
           ctx.fillRect(-nw / 2, -nh / 2, nw, nh);
           break;
@@ -795,7 +828,7 @@
     }
 
     /**
-     * 6. 时间轴与点击寻道
+     * 7. 時間軸與點擊尋道
      */
     function drawTimeline() {
       if (!tlCanvas.width) return;
@@ -813,7 +846,6 @@
       }
 
       chart.lines.forEach((line, lIdx) => {
-        const isActive = (lIdx === activeLineIndex);
         line.notes.forEach(note => {
           const x = (note.time / 1000) * 100;
           let color = '#79c0ff';
@@ -822,11 +854,9 @@
           if (note.type === 'flick') color = '#ff7b72';
 
           tlCtx.fillStyle = color;
-          tlCtx.globalAlpha = isActive ? 1.0 : 0.25;
-          tlCtx.fillRect(x - 2.5, 20, 5, tlCanvas.height - 40);
+          tlCtx.fillRect(x - 2, 20, 4, tlCanvas.height - 40);
         });
       });
-      tlCtx.globalAlpha = 1.0;
     }
 
     function updateTimelineScroll() {
@@ -841,7 +871,7 @@
     });
 
     /**
-     * 7. 导出配置
+     * 8. 一鍵導出
      */
     function exportPackage() {
       chart.lines.forEach(l => l.notes.sort((a, b) => a.time - b.time));
@@ -849,7 +879,7 @@
       const chartData = JSON.stringify(chart, null, 2);
       const infoData = JSON.stringify({
         title: document.getElementById('meta-title').value,
-        artist: "JR Track",
+        artist: "JR Custom",
         bpm: parseFloat(document.getElementById('meta-bpm').value),
         difficulty: "IN Lv.12",
         chart: "chart.json",
@@ -870,7 +900,7 @@
       URL.revokeObjectURL(a.href);
     }
 
-    // 初始化运行
+    // 初始化
     renderLineList();
     setupTimeline();
   </script>
