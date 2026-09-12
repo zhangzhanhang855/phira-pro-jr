@@ -3,211 +3,232 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Phira Web Player</title>
-  <!-- JSZip CDN for in-memory zip decompression -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <title>Phira Pro JR - Web Engine</title>
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       user-select: none;
+      -webkit-user-select: none;
     }
     body, html {
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background-color: #000;
+      background: #000;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       color: #fff;
     }
-    #canvas-container {
-      position: absolute;
-      top: 0;
-      left: 0;
+    #game-canvas {
+      display: block;
       width: 100vw;
       height: 100vh;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
     }
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
-    /* UI Overlay: File Loader */
-    #loader-overlay {
+
+    /* Modal / UI Shell */
+    .overlay-view {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
+      z-index: 10;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at center, #1b212f, #050608);
-      z-index: 100;
+      background: rgba(5, 7, 12, 0.88);
+      backdrop-filter: blur(24px);
+      transition: opacity 0.3s ease;
     }
-    .card {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      padding: 30px 40px;
-      border-radius: 12px;
-      backdrop-filter: blur(16px);
-      text-align: center;
-      max-width: 480px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
-    }
-    .title {
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      margin-bottom: 12px;
-      color: #79c0ff;
-    }
-    .desc {
-      font-size: 14px;
-      color: #8b949e;
-      margin-bottom: 24px;
-      line-height: 1.5;
-    }
-    .file-btn {
-      display: inline-block;
-      position: relative;
-      background: #238636;
-      color: #fff;
-      padding: 12px 24px;
-      border-radius: 6px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s ease;
-      overflow: hidden;
-    }
-    .file-btn:hover {
-      background: #2ea043;
-    }
-    .file-btn input[type="file"] {
-      position: absolute;
-      left: 0;
-      top: 0;
-      opacity: 0;
-      width: 100%;
-      height: 100%;
-      cursor: pointer;
-    }
-    #status-msg {
-      margin-top: 15px;
-      font-size: 13px;
-      color: #58a6ff;
-      min-height: 18px;
-    }
-    /* Settlement Modal */
-    #settle-overlay {
-      display: none;
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(20px);
-      z-index: 100;
+
+    /* Song Selection Hub */
+    .hub-container {
+      width: 90%;
+      max-width: 880px;
+      height: 80%;
+      display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-    }
-    .settle-box {
-      width: 80%;
-      max-width: 600px;
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 16px;
-      padding: 30px;
+      padding: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+    }
+    .hub-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .hub-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #79c0ff;
+      letter-spacing: 1px;
+    }
+    .repo-badge {
+      font-size: 13px;
+      color: #8b949e;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .song-list {
+      flex: 1;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+      padding-right: 8px;
+    }
+    .song-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
     }
-    .rank-text {
-      font-size: 96px;
+    .song-card:hover {
+      transform: translateY(-4px);
+      border-color: #79c0ff;
+      background: rgba(121, 192, 255, 0.08);
+    }
+    .song-thumb {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      background: #161b22;
+    }
+    .song-info {
+      padding: 12px;
+    }
+    .song-name {
+      font-size: 16px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+    .song-artist {
+      font-size: 12px;
+      color: #8b949e;
+      margin-bottom: 8px;
+    }
+    .song-level {
+      font-size: 11px;
+      color: #ffe57f;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    /* Settlement Display */
+    #settle-overlay {
+      display: none;
+    }
+    .settle-panel {
+      width: 85%;
+      max-width: 540px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 30px;
+      text-align: center;
+    }
+    .settle-rank {
+      font-size: 88px;
       font-weight: 900;
       margin: 10px 0;
-      letter-spacing: 4px;
-      color: #e3b341;
-      text-shadow: 0 0 20px rgba(227, 179, 65, 0.5);
+      color: #ffe57f;
+      text-shadow: 0 0 25px rgba(255, 229, 127, 0.4);
     }
-    .score-detail {
-      width: 100%;
-      margin-top: 20px;
+    .settle-score {
+      font-size: 34px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      letter-spacing: 2px;
+    }
+    .settle-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 15px;
+      gap: 12px;
+      font-size: 14px;
+      margin-bottom: 25px;
     }
-    .stat-row {
+    .settle-row {
       display: flex;
       justify-content: space-between;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      padding: 8px 0;
-      font-size: 15px;
+      padding: 6px 0;
     }
-    .action-btn {
-      margin-top: 25px;
-      background: #30363d;
-      border: 1px solid rgba(240, 246, 252, 0.1);
-      padding: 10px 28px;
+    .settle-btn {
+      background: #238636;
+      border: none;
       color: #fff;
+      padding: 10px 24px;
       border-radius: 6px;
-      cursor: pointer;
       font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
     }
-    .action-btn:hover {
-      background: #38404a;
-    }
+    .settle-btn:hover { background: #2ea043; }
   </style>
 </head>
 <body>
 
-  <!-- Loading & File Selection Screen -->
-  <div id="loader-overlay">
-    <div class="card">
-      <div class="title">PHIRA WEB CORE</div>
-      <div class="desc">Upload official or community Phira/Phigros chart pack (<code>.zip</code> format containing chart JSON, audio, and background).</div>
-      <label class="file-btn">
-        Select Chart .zip
-        <input type="file" id="zip-input" accept=".zip" />
-      </label>
-      <div id="status-msg"></div>
-    </div>
-  </div>
-
-  <!-- Game Settlement (Result) Screen -->
-  <div id="settle-overlay">
-    <div class="settle-box">
-      <div style="font-size: 20px; letter-spacing: 2px; color: #8b949e;">STAGE CLEAR</div>
-      <div class="rank-text" id="res-grade">φ</div>
-      <div style="font-size: 36px; font-weight: 700; margin-bottom: 10px;" id="res-score">1000000</div>
-      <div class="score-detail">
-        <div class="stat-row"><span>Perfect</span><span id="res-perf" style="color: #ffe57f;">0</span></div>
-        <div class="stat-row"><span>Good</span><span id="res-good" style="color: #80d8ff;">0</span></div>
-        <div class="stat-row"><span>Bad</span><span id="res-bad" style="color: #ff5252;">0</span></div>
-        <div class="stat-row"><span>Miss</span><span id="res-miss" style="color: #9e9e9e;">0</span></div>
-        <div class="stat-row"><span>Max Combo</span><span id="res-combo">0</span></div>
-        <div class="stat-row"><span>Accuracy</span><span id="res-acc">100.00%</span></div>
+  <!-- Song Selector & Repo Sync Hub -->
+  <div class="overlay-view" id="select-overlay">
+    <div class="hub-container">
+      <div class="hub-header">
+        <div>
+          <div class="hub-title">PHIRA PRO JR</div>
+          <div style="font-size: 12px; color: #8b949e; margin-top: 4px;">Dynamic Chart Sync Engine</div>
+        </div>
+        <div class="repo-badge" id="sync-status">Syncing with zhangzhanhang855/phira-pro-jr...</div>
       </div>
-      <button class="action-btn" onclick="location.reload()">Load Another Chart</button>
+      <div class="song-list" id="song-list-view"></div>
     </div>
   </div>
 
-  <!-- Render Canvas -->
-  <div id="canvas-container">
-    <canvas id="game-canvas"></canvas>
+  <!-- End Game Settlement View -->
+  <div class="overlay-view" id="settle-overlay">
+    <div class="settle-panel">
+      <div style="font-size: 18px; letter-spacing: 3px; color: #8b949e;">CLEAR</div>
+      <div class="settle-rank" id="res-grade">φ</div>
+      <div class="settle-score" id="res-score">1000000</div>
+      <div class="settle-grid">
+        <div class="settle-row"><span>Perfect</span><span id="res-perf" style="color: #ffe57f;">0</span></div>
+        <div class="settle-row"><span>Good</span><span id="res-good" style="color: #80d8ff;">0</span></div>
+        <div class="settle-row"><span>Bad</span><span id="res-bad" style="color: #ff5252;">0</span></div>
+        <div class="settle-row"><span>Miss</span><span id="res-miss" style="color: #8b949e;">0</span></div>
+        <div class="settle-row"><span>Max Combo</span><span id="res-combo">0</span></div>
+        <div class="settle-row"><span>Accuracy</span><span id="res-acc">100.00%</span></div>
+      </div>
+      <button class="settle-btn" onclick="returnToMenu()">Select Another Song</button>
+    </div>
   </div>
+
+  <!-- Main Game Canvas -->
+  <canvas id="game-canvas"></canvas>
 
   <script>
     /**
-     * PHIRA / PHIGROS SIMULATOR ENGINE CORE
-     * Standard implementation matching formatVersion 3
+     * PHIRA PRO JR ENGINE CORE
+     * Author: JR AI
      */
+    const GITHUB_OWNER = 'zhangzhanhang855';
+    const GITHUB_REPO = 'phira-pro-jr';
+    const GITHUB_BRANCH = 'main';
 
     const canvas = document.getElementById('game-canvas');
     const ctx = canvas.getContext('2d');
@@ -219,7 +240,7 @@
       height = canvas.height = window.innerHeight;
     });
 
-    // Web Audio State
+    // Audio & State
     let audioCtx = null;
     let audioBuffer = null;
     let audioSource = null;
@@ -227,12 +248,12 @@
     let isPlaying = false;
     let songDuration = 0;
 
-    // Game Chart Data
-    let chartData = null;
+    // Loaded Assets
+    let activeChart = null;
     let bgImage = new Image();
     let bgLoaded = false;
 
-    // Gameplay Metrics & Counters
+    // Scoring & Judgments
     let score = 0;
     let combo = 0;
     let maxCombo = 0;
@@ -242,151 +263,213 @@
     let missCount = 0;
     let totalNotes = 0;
 
-    // Judge Timings (seconds)
-    const JUDGE_PERFECT = 0.08;
-    const JUDGE_GOOD = 0.16;
-    const JUDGE_BAD = 0.20;
+    // Window bounds (ms)
+    const JUDGE_PERFECT = 80;
+    const JUDGE_GOOD = 160;
+    const JUDGE_BAD = 220;
 
-    // Interactive Touch Tracking
     const activeTouches = new Map();
 
-    function setStatus(text) {
-      document.getElementById('status-msg').innerText = text;
-    }
+    /**
+     * 1. Auto-synchronize and Discover charts in repository
+     */
+    async function syncRepositorySongs() {
+      const statusBadge = document.getElementById('sync-status');
+      const songListView = document.getElementById('song-list-view');
 
-    // Zip File Upload and Extraction
-    document.getElementById('zip-input').addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      setStatus('Extracting chart bundle...');
       try {
-        const zip = await JSZip.loadAsync(file);
-        let chartFile = null;
-        let audioFile = null;
-        let imageFile = null;
+        const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents?ref=${GITHUB_BRANCH}`;
+        const resp = await fetch(apiUrl);
 
-        // Traverse archive files
-        for (const [relativePath, zipEntry] of Object.entries(zip.files)) {
-          if (zipEntry.dir) continue;
-          const lower = relativePath.toLowerCase();
-          if (lower.endsWith('.json') || lower.endsWith('.csv') || lower.endsWith('.txt')) {
-            if (!chartFile || lower.includes('chart')) chartFile = zipEntry;
-          } else if (lower.endsWith('.mp3') || lower.endsWith('.ogg') || lower.endsWith('.wav')) {
-            audioFile = zipEntry;
-          } else if (lower.endsWith('.jpg') || lower.endsWith('.png') || lower.endsWith('.jpeg')) {
-            imageFile = zipEntry;
-          }
+        if (!resp.ok) {
+          throw new Error(`GitHub API returned status ${resp.status}`);
         }
 
-        if (!chartFile || !audioFile) {
-          throw new Error('Missing chart JSON or audio stream inside archive.');
+        const entries = await resp.json();
+        const folderItems = entries.filter(e => e.type === 'dir');
+
+        if (folderItems.length === 0) {
+          statusBadge.innerText = 'No chart folders found. Loading demo fallback...';
+          renderSongCards([createDemoPackageMeta()]);
+          return;
         }
 
-        // 1. Parse Chart JSON
-        setStatus('Parsing chart data...');
-        const chartJsonStr = await chartFile.async('string');
-        chartData = JSON.parse(chartJsonStr);
-        preprocessChart(chartData);
+        statusBadge.innerText = `Synced ${folderItems.length} charts from ${GITHUB_REPO}`;
+        const songPackages = folderItems.map(item => ({
+          id: item.name,
+          title: item.name.replace(/[-_]/g, ' ').toUpperCase(),
+          artist: 'JR Custom Track',
+          level: 'SP Lv.12',
+          basePath: `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${item.path}`
+        }));
 
-        // 2. Decode Audio
-        setStatus('Decoding audio assets...');
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const audioData = await audioFile.async('arraybuffer');
-        audioBuffer = await audioCtx.decodeAudioData(audioData);
-        songDuration = audioBuffer.duration;
-
-        // 3. Load Background
-        if (imageFile) {
-          const imgBlob = await imageFile.async('blob');
-          bgImage.src = URL.createObjectURL(imgBlob);
-          bgImage.onload = () => { bgLoaded = true; };
-        }
-
-        // Ready to Launch
-        document.getElementById('loader-overlay').style.display = 'none';
-        startGame();
+        renderSongCards(songPackages);
 
       } catch (err) {
-        console.error(err);
-        setStatus('Error parsing package: ' + err.message);
+        console.warn('Repository sync notice:', err.message);
+        statusBadge.innerText = 'GitHub API rate-limited or repo offline. Running demo fallback.';
+        renderSongCards([createDemoPackageMeta()]);
       }
-    });
+    }
 
-    /**
-     * Parse Official Phigros formatVersion 3
-     * Precalculates absolute timestamps, floor positions, and hit counters.
-     */
-    function preprocessChart(chart) {
-      totalNotes = 0;
+    function createDemoPackageMeta() {
+      return {
+        id: 'demo-song',
+        title: 'PROTOTYPE RHYTHM',
+        artist: 'JR Synthetic Core',
+        level: 'IN Lv.14',
+        isDemo: true,
+        basePath: ''
+      };
+    }
 
-      chart.judgeLineList.forEach((line) => {
-        // Pre-compute line floor position cache
-        let currentFloor = 0;
-        let lastT = 0;
-        line.speedEvents.forEach((ev) => {
-          ev.startTime = beatsToSeconds(chart, ev.startTime);
-          ev.endTime = beatsToSeconds(chart, ev.endTime);
-          ev.floorPosition = currentFloor;
-          currentFloor += (ev.endTime - ev.startTime) * ev.value;
-        });
+    function renderSongCards(packages) {
+      const songListView = document.getElementById('song-list-view');
+      songListView.innerHTML = '';
 
-        // Convert events timing to seconds
-        line.judgeLineMoveEvents.forEach(ev => {
-          ev.startTime = beatsToSeconds(chart, ev.startTime);
-          ev.endTime = beatsToSeconds(chart, ev.endTime);
-        });
-        line.judgeLineRotateEvents.forEach(ev => {
-          ev.startTime = beatsToSeconds(chart, ev.startTime);
-          ev.endTime = beatsToSeconds(chart, ev.endTime);
-        });
-        line.judgeLineDisappearEvents.forEach(ev => {
-          ev.startTime = beatsToSeconds(chart, ev.startTime);
-          ev.endTime = beatsToSeconds(chart, ev.endTime);
-        });
-
-        // Parse Notes (Above & Below Lines)
-        const parseNoteList = (notes, isAbove) => {
-          notes.forEach(note => {
-            totalNotes++;
-            note.time = beatsToSeconds(chart, note.time);
-            note.holdTime = beatsToSeconds(chart, note.holdTime);
-            note.isAbove = isAbove;
-            note.state = 'PENDING'; // PENDING, PERFECT, GOOD, BAD, MISS
-            note.evaluated = false;
-            note.holdProgress = 0;
-          });
-        };
-
-        if (line.notesAbove) parseNoteList(line.notesAbove, true);
-        if (line.notesBelow) parseNoteList(line.notesBelow, false);
+      packages.forEach(pkg => {
+        const card = document.createElement('div');
+        card.className = 'song-card';
+        card.innerHTML = `
+          <div class="song-thumb" style="display:flex;align-items:center;justify-content:center;color:#484f58;font-size:24px;font-weight:700;">PHIRA</div>
+          <div class="song-info">
+            <div class="song-name">${pkg.title}</div>
+            <div class="song-artist">${pkg.artist}</div>
+            <div class="song-level">${pkg.level}</div>
+          </div>
+        `;
+        card.addEventListener('click', () => loadAndStartPackage(pkg));
+        songListView.appendChild(card);
       });
     }
 
-    // Convert BPM beat intervals to absolute seconds
-    function beatsToSeconds(chart, beat) {
-      let time = 0;
-      let curBeat = 0;
-      const bpmList = chart.BPMList;
+    /**
+     * 2. Load Selected Song Package
+     */
+    async function loadAndStartPackage(pkg) {
+      document.getElementById('sync-status').innerText = `Loading ${pkg.title}...`;
 
-      for (let i = 0; i < bpmList.length; i++) {
-        const cur = bpmList[i];
-        const next = bpmList[i + 1];
-        const segBeat = (next && beat > next.startTime ? next.startTime : beat) - cur.startTime;
-        if (segBeat > 0) {
-          time += (segBeat * 60.0) / cur.bpm;
-        }
-        if (next && beat >= next.startTime) {
-          continue;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+        if (pkg.isDemo) {
+          setupDemoChart();
         } else {
-          break;
+          // Fetch chart.json
+          const chartResp = await fetch(`${pkg.basePath}/chart.json`);
+          activeChart = await chartResp.json();
+
+          // Fetch audio.mp3
+          const audioResp = await fetch(`${pkg.basePath}/audio.mp3`);
+          const audioBuf = await audioResp.arrayBuffer();
+          audioBuffer = await audioCtx.decodeAudioData(audioBuf);
+          songDuration = audioBuffer.duration;
+
+          // Fetch bg.jpg (Optional)
+          bgLoaded = false;
+          bgImage.src = `${pkg.basePath}/bg.jpg`;
+          bgImage.onload = () => { bgLoaded = true; };
         }
+
+        preprocessActiveChart();
+        document.getElementById('select-overlay').style.display = 'none';
+        startGame();
+
+      } catch (err) {
+        alert(`Failed to load song package: ${err.message}. Falling back to demo chart.`);
+        setupDemoChart();
+        preprocessActiveChart();
+        document.getElementById('select-overlay').style.display = 'none';
+        startGame();
       }
-      return time;
+    }
+
+    /**
+     * Synthetic Demo Chart Generator (Used when repo assets are pending)
+     */
+    function setupDemoChart() {
+      songDuration = 22.0;
+
+      // Synthesize an electronic audio beat buffer
+      const sampleRate = audioCtx.sampleRate;
+      const numSamples = Math.floor(sampleRate * songDuration);
+      audioBuffer = audioCtx.createBuffer(2, numSamples, sampleRate);
+      const chL = audioBuffer.getChannelData(0);
+      const chR = audioBuffer.getChannelData(1);
+
+      for (let i = 0; i < numSamples; i++) {
+        const t = i / sampleRate;
+        // Kick + hihat synth rhythm
+        const kick = Math.sin(2 * Math.PI * 60 * (1 - (t % 0.5)) * (t % 0.5)) * Math.exp(- (t % 0.5) * 8);
+        const noise = (Math.random() * 2 - 1) * 0.1 * Math.exp(-((t + 0.25) % 0.5) * 20);
+        chL[i] = chR[i] = (t % 0.5 < 0.2 ? kick : 0) + noise;
+      }
+
+      // Generate custom JSON chart
+      activeChart = {
+        offset: 0,
+        lines: [
+          {
+            id: 0,
+            moveEvents: [
+              { startTime: 0, endTime: 3000, startX: 0.5, startY: 0.5, endX: 0.5, endY: 0.4 },
+              { startTime: 3000, endTime: 6000, startX: 0.5, startY: 0.4, endX: 0.5, endY: 0.6 },
+              { startTime: 6000, endTime: 9000, startX: 0.5, startY: 0.6, endX: 0.5, endY: 0.5 }
+            ],
+            rotateEvents: [
+              { startTime: 1000, endTime: 2500, startAngle: 0, endAngle: 18 },
+              { startTime: 2500, endTime: 4000, startAngle: 18, endAngle: -18 },
+              { startTime: 4000, endTime: 5500, startAngle: -18, endAngle: 0 }
+            ],
+            alphaEvents: [
+              { startTime: 0, endTime: 500, startAlpha: 0, endAlpha: 1 }
+            ],
+            notes: [
+              // Tap
+              { type: 'tap', time: 1000, posX: -150, speed: 1.0, isAbove: true },
+              { type: 'tap', time: 1500, posX: 150, speed: 1.0, isAbove: true },
+              // Drag
+              { type: 'drag', time: 2000, posX: -100, speed: 1.0, isAbove: true },
+              { type: 'drag', time: 2250, posX: 0, speed: 1.0, isAbove: true },
+              { type: 'drag', time: 2500, posX: 100, speed: 1.0, isAbove: true },
+              // Hold
+              { type: 'hold', time: 3200, holdTime: 1200, posX: -120, speed: 1.0, isAbove: true },
+              { type: 'tap', time: 4000, posX: 120, speed: 1.0, isAbove: false },
+              // Flick
+              { type: 'flick', time: 5000, posX: 0, speed: 1.2, isAbove: true }
+            ]
+          }
+        ]
+      };
+      bgLoaded = false;
+    }
+
+    /**
+     * 3. Preprocess Active Chart
+     */
+    function preprocessActiveChart() {
+      totalNotes = 0;
+      perfectCount = 0;
+      goodCount = 0;
+      badCount = 0;
+      missCount = 0;
+      combo = 0;
+      maxCombo = 0;
+      score = 0;
+
+      activeChart.lines.forEach(line => {
+        if (!line.notes) return;
+        line.notes.forEach(note => {
+          totalNotes++;
+          note.state = 'PENDING';
+          note.evaluated = false;
+        });
+      });
     }
 
     function startGame() {
-      audioStartTime = audioCtx.currentTime + 0.5; // Half second delay for layout stabilization
+      audioStartTime = audioCtx.currentTime + 0.3;
       audioSource = audioCtx.createBufferSource();
       audioSource.buffer = audioBuffer;
       audioSource.connect(audioCtx.destination);
@@ -395,112 +478,99 @@
       requestAnimationFrame(renderLoop);
     }
 
-    // Evaluate interpolation for dynamic events
-    function interpolate(startTime, endTime, startVal, endVal, curTime) {
-      if (curTime <= startTime) return startVal;
-      if (curTime >= endTime) return endVal;
-      const ratio = (curTime - startTime) / (endTime - startTime);
-      return startVal + (endVal - startVal) * ratio;
+    function interpolate(t, sT, eT, sV, eV) {
+      if (t <= sT) return sV;
+      if (t >= eT) return eV;
+      const progress = (t - sT) / (eT - sT);
+      return sV + (eV - sV) * progress;
     }
 
-    function getLineTransform(line, curTime) {
-      // 1. Position: default center is (0.5, 0.5)
-      let posX = 0.5, posY = 0.5;
-      for (let ev of line.judgeLineMoveEvents) {
-        if (curTime >= ev.startTime && curTime <= ev.endTime) {
-          posX = interpolate(ev.startTime, ev.endTime, ev.start, ev.end, curTime);
-          posY = interpolate(ev.startTime, ev.endTime, ev.start2, ev.end2, curTime);
-          break;
-        } else if (curTime > ev.endTime) {
-          posX = ev.end;
-          posY = ev.end2;
+    function getLineState(line, curMs) {
+      let x = 0.5, y = 0.5;
+      if (line.moveEvents) {
+        for (const ev of line.moveEvents) {
+          if (curMs >= ev.startTime && curMs <= ev.endTime) {
+            x = interpolate(curMs, ev.startTime, ev.endTime, ev.startX, ev.endX);
+            y = interpolate(curMs, ev.startTime, ev.endTime, ev.startY, ev.endY);
+            break;
+          } else if (curMs > ev.endTime) {
+            x = ev.endX;
+            y = ev.endY;
+          }
         }
       }
 
-      // 2. Rotation: in degrees
       let angle = 0;
-      for (let ev of line.judgeLineRotateEvents) {
-        if (curTime >= ev.startTime && curTime <= ev.endTime) {
-          angle = interpolate(ev.startTime, ev.endTime, ev.start, ev.end, curTime);
-          break;
-        } else if (curTime > ev.endTime) {
-          angle = ev.end;
+      if (line.rotateEvents) {
+        for (const ev of line.rotateEvents) {
+          if (curMs >= ev.startTime && curMs <= ev.endTime) {
+            angle = interpolate(curMs, ev.startTime, ev.endTime, ev.startAngle, ev.endAngle);
+            break;
+          } else if (curMs > ev.endTime) {
+            angle = ev.endAngle;
+          }
         }
       }
 
-      // 3. Alpha (Disappear)
       let alpha = 1.0;
-      for (let ev of line.judgeLineDisappearEvents) {
-        if (curTime >= ev.startTime && curTime <= ev.endTime) {
-          alpha = interpolate(ev.startTime, ev.endTime, ev.start, ev.end, curTime);
-          break;
-        } else if (curTime > ev.endTime) {
-          alpha = ev.end;
+      if (line.alphaEvents) {
+        for (const ev of line.alphaEvents) {
+          if (curMs >= ev.startTime && curMs <= ev.endTime) {
+            alpha = interpolate(curMs, ev.startTime, ev.endTime, ev.startAlpha, ev.endAlpha);
+            break;
+          } else if (curMs > ev.endTime) {
+            alpha = ev.endAlpha;
+          }
         }
       }
 
-      // 4. Floor Position computation
-      let currentFloor = 0;
-      for (let ev of line.speedEvents) {
-        if (curTime >= ev.startTime && curTime <= ev.endTime) {
-          currentFloor = ev.floorPosition + (curTime - ev.startTime) * ev.value;
-          break;
-        } else if (curTime > ev.endTime) {
-          currentFloor = ev.floorPosition + (ev.endTime - ev.startTime) * ev.value;
-        }
-      }
-
-      return { x: posX * width, y: (1.0 - posY) * height, angle: -angle, alpha, floor: currentFloor };
+      return {
+        x: x * width,
+        y: y * height,
+        angle: angle,
+        alpha: Math.max(0, Math.min(1, alpha))
+      };
     }
 
     /**
-     * Touch / Input Handling System
+     * 4. Interactive Input Handling
      */
-    function handleTouch(x, y, isFlick = false) {
-      if (!chartData || !isPlaying) return;
-      const curTime = Math.max(0, audioCtx.currentTime - audioStartTime);
+    function triggerHitDetection(posX, posY, isFlick = false) {
+      if (!isPlaying || !activeChart) return;
+      const curMs = (audioCtx.currentTime - audioStartTime) * 1000 - (activeChart.offset || 0);
 
-      chartData.judgeLineList.forEach(line => {
-        const trans = getLineTransform(line, curTime);
-        const rad = (-trans.angle * Math.PI) / 180;
+      activeChart.lines.forEach(line => {
+        const state = getLineState(line, curMs);
+        const rad = (-state.angle * Math.PI) / 180;
         const cos = Math.cos(rad);
         const sin = Math.sin(rad);
 
-        // Convert touch coordinates to judgment line local coordinate system
-        const dx = x - trans.x;
-        const dy = y - trans.y;
+        const dx = posX - state.x;
+        const dy = posY - state.y;
         const localX = dx * cos - dy * sin;
 
-        const checkNotes = (notes) => {
-          notes.forEach(note => {
-            if (note.state !== 'PENDING') return;
-            const dt = Math.abs(note.time - curTime);
-            // Check Hitboxes: ~120px lane width allowance
-            const noteScreenX = (note.positionX / 9) * (width * 0.6);
-            if (Math.abs(localX - noteScreenX) < 130) {
-              if (dt <= JUDGE_BAD) {
-                if (note.type === 4 && !isFlick) return; // Flick notes require flick gesture
-                
-                if (dt <= JUDGE_PERFECT) {
-                  registerHit(note, 'PERFECT');
-                } else if (dt <= JUDGE_GOOD) {
-                  registerHit(note, 'GOOD');
-                } else {
-                  registerHit(note, 'BAD');
-                }
-              }
-            }
-          });
-        };
+        line.notes.forEach(note => {
+          if (note.state !== 'PENDING') return;
+          const dt = Math.abs(note.time - curMs);
 
-        if (line.notesAbove) checkNotes(line.notesAbove);
-        if (line.notesBelow) checkNotes(line.notesBelow);
+          // Note hit boundary (x-axis tolerance ~100px)
+          if (Math.abs(localX - note.posX) <= 100) {
+            if (dt <= JUDGE_BAD) {
+              if (note.type === 'flick' && !isFlick) return;
+
+              if (dt <= JUDGE_PERFECT) registerHit(note, 'PERFECT');
+              else if (dt <= JUDGE_GOOD) registerHit(note, 'GOOD');
+              else registerHit(note, 'BAD');
+            }
+          }
+        });
       });
     }
 
     function registerHit(note, rating) {
       note.state = rating;
       note.evaluated = true;
+
       if (rating === 'PERFECT') {
         perfectCount++;
         combo++;
@@ -514,174 +584,157 @@
         missCount++;
         combo = 0;
       }
+
       if (combo > maxCombo) maxCombo = combo;
       recalculateScore();
     }
 
     function recalculateScore() {
       if (totalNotes === 0) return;
-      // Phigros Score = (0.9 * Base Score) + (0.1 * Combo Score)
-      const noteScore = (perfectCount * 1.0 + goodCount * 0.65) / totalNotes;
+      const hitRatio = (perfectCount * 1.0 + goodCount * 0.65) / totalNotes;
       const comboRatio = maxCombo / totalNotes;
-      score = Math.round((noteScore * 900000) + (comboRatio * 100000));
+      score = Math.round((hitRatio * 900000) + (comboRatio * 100000));
     }
 
-    // Screen Touch Listeners
     canvas.addEventListener('pointerdown', (e) => {
-      activeTouches.set(e.pointerId, { startX: e.clientX, startY: e.clientY, curX: e.clientX, curY: e.clientY, time: Date.now() });
-      handleTouch(e.clientX, e.clientY, false);
+      activeTouches.set(e.pointerId, { sx: e.clientX, sy: e.clientY, time: Date.now() });
+      triggerHitDetection(e.clientX, e.clientY, false);
     });
 
     canvas.addEventListener('pointermove', (e) => {
       if (!activeTouches.has(e.pointerId)) return;
       const t = activeTouches.get(e.pointerId);
-      const deltaDist = Math.hypot(e.clientX - t.startX, e.clientY - t.startY);
-      const deltaTime = Date.now() - t.time;
+      const dist = Math.hypot(e.clientX - t.sx, e.clientY - t.sy);
+      const dt = Date.now() - t.time;
 
-      // Detect high velocity motion as a Flick
-      if (deltaDist > 25 && deltaTime < 180) {
-        handleTouch(e.clientX, e.clientY, true);
+      if (dist > 25 && dt < 180) {
+        triggerHitDetection(e.clientX, e.clientY, true);
       }
-      t.curX = e.clientX;
-      t.curY = e.clientY;
     });
 
     canvas.addEventListener('pointerup', (e) => activeTouches.delete(e.pointerId));
     canvas.addEventListener('pointercancel', (e) => activeTouches.delete(e.pointerId));
 
     /**
-     * Primary Render & Physics Loop
+     * 5. Game Loop & Rendering Pipeline
      */
     function renderLoop() {
       if (!isPlaying) return;
-      const curTime = Math.max(0, audioCtx.currentTime - audioStartTime);
+      const curSec = audioCtx.currentTime - audioStartTime;
+      const curMs = curSec * 1000 - (activeChart.offset || 0);
 
-      // Check for chart completion
-      if (curTime > songDuration + 1.5) {
-        showSettlement();
+      // Check chart completion
+      if (curSec > songDuration + 1.2) {
+        finishPlay();
         return;
       }
 
       ctx.clearRect(0, 0, width, height);
 
-      // 1. Draw Background (dimmed & blurred)
+      // Background
       if (bgLoaded) {
         ctx.save();
-        ctx.filter = 'brightness(0.35) blur(12px)';
+        ctx.filter = 'brightness(0.35) blur(16px)';
         ctx.drawImage(bgImage, 0, 0, width, height);
         ctx.restore();
       } else {
-        ctx.fillStyle = '#0a0d14';
+        ctx.fillStyle = '#0a0d13';
         ctx.fillRect(0, 0, width, height);
       }
 
-      // 2. Iterate and Render Judgment Lines & Notes
-      if (chartData) {
-        chartData.judgeLineList.forEach((line) => {
-          const trans = getLineTransform(line, curTime);
-          if (trans.alpha <= 0.001) return;
+      // Judgment Lines & Notes
+      if (activeChart) {
+        activeChart.lines.forEach(line => {
+          const state = getLineState(line, curMs);
+          if (state.alpha <= 0.01) return;
 
           ctx.save();
-          ctx.translate(trans.x, trans.y);
-          ctx.rotate((trans.angle * Math.PI) / 180);
-          ctx.globalAlpha = Math.max(0, Math.min(1, trans.alpha));
+          ctx.translate(state.x, state.y);
+          ctx.rotate((state.angle * Math.PI) / 180);
+          ctx.globalAlpha = state.alpha;
 
-          // Draw Judgment Line (Standard Phigros glow bar)
-          const lineLength = width * 2.5; // Infinite beam span
+          // Render Judgment Line
           ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = 3.5;
           ctx.beginPath();
-          ctx.moveTo(-lineLength, 0);
-          ctx.lineTo(lineLength, 0);
+          ctx.moveTo(-width * 2, 0);
+          ctx.lineTo(width * 2, 0);
           ctx.stroke();
 
-          // Render Attached Notes
-          const renderNotes = (notes, isAbove) => {
-            const sideFactor = isAbove ? 1 : -1;
+          // Render Notes
+          line.notes.forEach(note => {
+            if (note.state !== 'PENDING') return;
 
-            notes.forEach((note) => {
-              if (note.state !== 'PENDING') return;
+            const dt = note.time - curMs;
+            const side = note.isAbove ? -1 : 1;
+            const speedFactor = note.speed * (height * 0.0012);
+            const yOffset = dt * speedFactor * side;
 
-              // Compute Y distance offset via speed integral / time delta
-              const timeOffset = note.time - curTime;
-              const yOffset = -timeOffset * (height * 0.75) * note.speed * sideFactor;
-              const xOffset = (note.positionX / 9) * (width * 0.6);
+            // Miss boundary
+            if (dt < -JUDGE_BAD) {
+              registerHit(note, 'MISS');
+              return;
+            }
 
-              // Missing window test
-              if (timeOffset < -JUDGE_BAD) {
-                registerHit(note, 'MISS');
-                return;
-              }
+            // Drag auto-trigger
+            if (note.type === 'drag' && Math.abs(dt) <= JUDGE_GOOD) {
+              registerHit(note, 'PERFECT');
+              return;
+            }
 
-              // Auto-hit check for Drag notes
-              if (note.type === 2 && Math.abs(timeOffset) <= JUDGE_GOOD) {
-                registerHit(note, 'PERFECT');
-                return;
-              }
-
-              // Draw Note by Type (1: Tap, 2: Drag, 3: Hold, 4: Flick)
-              drawNote(ctx, xOffset, yOffset, note, sideFactor);
-            });
-          };
-
-          if (line.notesAbove) renderNotes(line.notesAbove, true);
-          if (line.notesBelow) renderNotes(line.notesBelow, false);
+            drawNoteItem(ctx, note.posX, yOffset, note, side);
+          });
 
           ctx.restore();
         });
       }
 
-      // 3. Render In-Game HUD
-      renderHUD(curTime);
+      // In-game HUD
+      drawHUD(curSec);
 
       requestAnimationFrame(renderLoop);
     }
 
-    /**
-     * High-Precision Note Rendering
-     */
-    function drawNote(ctx, x, y, note, sideFactor) {
-      const w = width * 0.09;
-      const h = 10;
-
+    function drawNoteItem(ctx, x, y, note, side) {
+      const nw = 90;
+      const nh = 10;
       ctx.save();
       ctx.translate(x, y);
 
       switch (note.type) {
-        case 1: // Tap Note (Cyan)
+        case 'tap':
           ctx.fillStyle = '#79c0ff';
-          ctx.fillRect(-w / 2, -h / 2, w, h);
-          ctx.strokeStyle = '#c8e1ff';
+          ctx.fillRect(-nw / 2, -nh / 2, nw, nh);
+          ctx.strokeStyle = '#e6f1ff';
           ctx.lineWidth = 1.5;
-          ctx.strokeRect(-w / 2, -h / 2, w, h);
+          ctx.strokeRect(-nw / 2, -nh / 2, nw, nh);
           break;
 
-        case 2: // Drag Note (Gold diamond)
+        case 'drag':
           ctx.fillStyle = '#ffe57f';
           ctx.beginPath();
-          ctx.moveTo(0, -h * 1.2);
-          ctx.lineTo(w * 0.35, 0);
-          ctx.lineTo(0, h * 1.2);
-          ctx.lineTo(-w * 0.35, 0);
+          ctx.moveTo(0, -nh * 1.3);
+          ctx.lineTo(nw * 0.32, 0);
+          ctx.lineTo(0, nh * 1.3);
+          ctx.lineTo(-nw * 0.32, 0);
           ctx.closePath();
           ctx.fill();
           break;
 
-        case 3: // Hold Note (Long Ribbon)
-          const holdHeight = (note.holdTime * (height * 0.75) * note.speed) * sideFactor;
+        case 'hold':
+          const holdLength = (note.holdTime * note.speed * (height * 0.0012)) * -side;
           ctx.fillStyle = 'rgba(121, 192, 255, 0.45)';
-          ctx.fillRect(-w / 2, 0, w, -holdHeight);
-          // Hold Head
+          ctx.fillRect(-nw / 2, 0, nw, holdLength);
           ctx.fillStyle = '#79c0ff';
-          ctx.fillRect(-w / 2, -h / 2, w, h);
+          ctx.fillRect(-nw / 2, -nh / 2, nw, nh);
           break;
 
-        case 4: // Flick Note (Red Chevron)
+        case 'flick':
           ctx.fillStyle = '#ff5252';
           ctx.beginPath();
-          ctx.moveTo(-w / 2, h);
-          ctx.lineTo(0, -h);
-          ctx.lineTo(w / 2, h);
+          ctx.moveTo(-nw / 2, nh);
+          ctx.lineTo(0, -nh);
+          ctx.lineTo(nw / 2, nh);
           ctx.lineTo(0, 0);
           ctx.closePath();
           ctx.fill();
@@ -690,46 +743,42 @@
       ctx.restore();
     }
 
-    /**
-     * Render Phigros UI (Score, Combo, Pause indicator, Song progress)
-     */
-    function renderHUD(curTime) {
+    function drawHUD(curSec) {
       ctx.save();
-      // Score (Top Right)
+      // Score Top-Right
       ctx.font = '600 24px monospace';
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'right';
-      ctx.fillText(score.toString().padStart(7, '0'), width - 30, 45);
+      ctx.fillText(score.toString().padStart(7, '0'), width - 32, 44);
 
-      // Combo Display (Center Screen)
+      // Center Combo
       if (combo >= 3) {
         ctx.textAlign = 'center';
-        ctx.font = '700 38px sans-serif';
+        ctx.font = '700 36px sans-serif';
         ctx.fillText(combo, width / 2, 80);
         ctx.font = '12px sans-serif';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
         ctx.letterSpacing = '4px';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
         ctx.fillText('COMBO', width / 2, 100);
       }
 
-      // Song Progress Bar (Top)
-      const progress = Math.min(1.0, curTime / (songDuration || 1));
-      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      // Progress bar
+      const prog = Math.min(1.0, curSec / (songDuration || 1));
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
       ctx.fillRect(0, 0, width, 3);
       ctx.fillStyle = '#79c0ff';
-      ctx.fillRect(0, 0, width * progress, 3);
+      ctx.fillRect(0, 0, width * prog, 3);
 
       ctx.restore();
     }
 
     /**
-     * Settlement Display and Rank Calculation
+     * 6. Settlement & Return
      */
-    function showSettlement() {
+    function finishPlay() {
       isPlaying = false;
       document.getElementById('settle-overlay').style.display = 'flex';
 
-      // Determine Grade
       let grade = 'False';
       if (score === 1000000) grade = 'φ';
       else if (score >= 960000) grade = 'V';
@@ -750,6 +799,17 @@
       document.getElementById('res-combo').innerText = maxCombo;
       document.getElementById('res-acc').innerText = `${acc}%`;
     }
+
+    function returnToMenu() {
+      document.getElementById('settle-overlay').style.display = 'none';
+      document.getElementById('select-overlay').style.display = 'flex';
+      syncRepositorySongs();
+    }
+
+    // Auto-launch sync upon opening the page
+    window.addEventListener('DOMContentLoaded', () => {
+      syncRepositorySongs();
+    });
   </script>
 </body>
 </html>
