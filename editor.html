@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phira Pro JR - Chart Studio</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel-bg: #161b22;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --text: #c9d1d9;
+      --text-dim: #8b949e;
+      --tap-color: #79c0ff;
+      --drag-color: #ffe57f;
+      --hold-color: #56d364;
+      --flick-color: #ff7b72;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      display: flex;
+      height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+      overflow: hidden;
+    }
+
+    /* Left Control Sidebar */
+    .sidebar {
+      width: 340px;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 5;
+    }
+
+    .section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 10px;
+    }
+
+    .form-group label {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    input, select, button {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      flex: 1;
+      cursor: pointer;
+      font-weight: 600;
+      transition: 0.15s ease;
+      text-align: center;
+    }
+
+    .btn-primary { background: #238636; border-color: #2ea043; }
+    .btn-primary:hover { background: #2ea043; }
+    .btn-action { background: #1f6feb; border-color: #388bfd; }
+    .btn-action:hover { background: #388bfd; }
+    .btn-danger { background: #b62324; border-color: #d73a49; }
+
+    /* Note Type Selector */
+    .type-selector {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .type-btn {
+      padding: 8px 4px;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: #0d1117;
+      text-align: center;
+    }
+
+    .type-btn.active[data-type="tap"] { background: var(--tap-color); color: #000; }
+    .type-btn.active[data-type="drag"] { background: var(--drag-color); color: #000; }
+    .type-btn.active[data-type="hold"] { background: var(--hold-color); color: #000; }
+    .type-btn.active[data-type="flick"] { background: var(--flick-color); color: #000; }
+
+    /* Right Main Studio */
+    .main-workspace {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .preview-header {
+      height: 48px;
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+    }
+
+    .transport-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .time-readout {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--accent);
+    }
+
+    #stage-canvas {
+      flex: 1;
+      background: #05070a;
+      cursor: crosshair;
+    }
+
+    /* Bottom Timeline Track */
+    .timeline-container {
+      height: 140px;
+      background: #11151c;
+      border-top: 1px solid var(--border);
+      position: relative;
+      overflow-x: scroll;
+      overflow-y: hidden;
+    }
+
+    #timeline-canvas {
+      height: 100%;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Left Sidebar Controls -->
+  <div class="sidebar">
+    <div class="section">
+      <div class="section-title">1. Audio & Project Setup</div>
+      <div class="form-group">
+        <label>Song Title</label>
+        <input type="text" id="meta-title" value="New Track">
+      </div>
+      <div class="form-group">
+        <label>Artist</label>
+        <input type="text" id="meta-artist" value="Unknown Artist">
+      </div>
+      <div class="btn-row">
+        <div class="form-group" style="flex:1;">
+          <label>BPM</label>
+          <input type="number" id="meta-bpm" value="120" step="0.1">
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label>Difficulty</label>
+          <input type="text" id="meta-level" value="IN Lv.12">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Load MP3 / OGG</label>
+        <input type="file" id="audio-input" accept="audio/*">
+      </div>
+    </div>
+
+    <!-- Note Editing Panel -->
+    <div class="section">
+      <div class="section-title">2. Note Tooling</div>
+      <div class="form-group">
+        <label>Note Placement Type</label>
+        <div class="type-selector">
+          <div class="type-btn active" data-type="tap">TAP</div>
+          <div class="type-btn" data-type="drag">DRAG</div>
+          <div class="type-btn" data-type="hold">HOLD</div>
+          <div class="type-btn" data-type="flick">FLICK</div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <div class="form-group" style="flex:1;">
+          <label>Hold Duration (ms)</label>
+          <input type="number" id="tool-holdtime" value="800" step="50">
+        </div>
+        <div class="form-group" style="flex:1;">
+          <label>Speed Multiplier</label>
+          <input type="number" id="tool-speed" value="1.0" step="0.1">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Side Orientation</label>
+        <select id="tool-side">
+          <option value="above">Above (Normal Fall)</option>
+          <option value="below">Below (Reverse Fall)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Line Events Controls -->
+    <div class="section" style="flex:1; overflow-y:auto;">
+      <div class="section-title">3. Line Event Operations</div>
+      <button class="btn btn-action" style="width:100%; margin-bottom:8px;" onclick="addRotateKeyframe()">Add Rotate Keyframe</button>
+      <button class="btn btn-action" style="width:100%; margin-bottom:8px;" onclick="addMoveKeyframe()">Add Move Keyframe</button>
+      <div style="font-size: 11px; color: var(--text-dim); line-height: 1.4;">
+        Note Count: <span id="stat-notecount">0</span><br>
+        Keyframes: <span id="stat-events">0</span>
+      </div>
+    </div>
+
+    <!-- Export Section -->
+    <div class="section">
+      <div class="section-title">4. Export Package</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="exportPackage()">Download Files</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Workspace Canvas -->
+  <div class="main-workspace">
+    <div class="preview-header">
+      <div class="transport-controls">
+        <button class="btn btn-action" id="play-btn" onclick="togglePlay()">Play (Space)</button>
+        <button class="btn" onclick="seekTo(0)">Restart</button>
+        <div class="time-readout" id="time-display">00:00.000</div>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <span style="font-size: 12px; color: var(--text-dim);">Snap Grid:</span>
+        <select id="grid-snap" style="width: 80px;">
+          <option value="4">1/4</option>
+          <option value="8" selected>1/8</option>
+          <option value="16">1/16</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Main Live Simulator Viewport -->
+    <canvas id="stage-canvas"></canvas>
+
+    <!-- Bottom Waveform & Note Timeline -->
+    <div class="timeline-container" id="timeline-scroll">
+      <canvas id="timeline-canvas"></canvas>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * PHIRA PRO JR CHART STUDIO
+     * Graphically author, sync audio, and export custom json specifications
+     */
+    let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let audioBuffer = null;
+    let audioSource = null;
+    let isPlaying = false;
+    let startTime = 0;
+    let pauseTime = 0;
+    let currentMs = 0;
+
+    // Viewport Canvases
+    const stageCanvas = document.getElementById('stage-canvas');
+    const stageCtx = stageCanvas.getContext('2d');
+    const tlCanvas = document.getElementById('timeline-canvas');
+    const tlCtx = tlCanvas.getContext('2d');
+
+    let stageW = (stageCanvas.width = stageCanvas.clientWidth);
+    let stageH = (stageCanvas.height = stageCanvas.clientHeight);
+
+    window.addEventListener('resize', () => {
+      stageW = stageCanvas.width = stageCanvas.clientWidth;
+      stageH = stageCanvas.height = stageCanvas.clientHeight;
+      drawTimeline();
+    });
+
+    // Active Tooling State
+    let selectedType = 'tap';
+    document.querySelectorAll('.type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedType = btn.getAttribute('data-type');
+      });
+    });
+
+    // Custom Chart Data Model
+    const chart = {
+      offset: 0,
+      lines: [
+        {
+          id: 0,
+          moveEvents: [{ startTime: 0, endTime: 1000, startX: 0.5, startY: 0.5, endX: 0.5, endY: 0.5 }],
+          rotateEvents: [{ startTime: 0, endTime: 1000, startAngle: 0, endAngle: 0 }],
+          alphaEvents: [{ startTime: 0, endTime: 500, startAlpha: 0.0, endAlpha: 1.0 }],
+          notes: []
+        }
+      ]
+    };
+
+    // Load Audio File
+    document.getElementById('audio-input').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const arrayBuffer = await file.arrayBuffer();
+      audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      setupTimelineCanvas();
+      drawTimeline();
+    });
+
+    function setupTimelineCanvas() {
+      if (!audioBuffer) return;
+      const duration = audioBuffer.duration;
+      // 100 pixels per second
+      tlCanvas.width = Math.max(window.innerWidth, duration * 100);
+      tlCanvas.height = 140;
+    }
+
+    /**
+     * Transport & Audio Execution
+     */
+    function togglePlay() {
+      if (!audioBuffer) return;
+      if (isPlaying) {
+        pauseAudio();
+      } else {
+        playAudio();
+      }
+    }
+
+    function playAudio() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      audioSource = audioCtx.createBufferSource();
+      audioSource.buffer = audioBuffer;
+      audioSource.connect(audioCtx.destination);
+      startTime = audioCtx.currentTime - (pauseTime / 1000);
+      audioSource.start(0, pauseTime / 1000);
+      isPlaying = true;
+      document.getElementById('play-btn').innerText = 'Pause (Space)';
+    }
+
+    function pauseAudio() {
+      if (audioSource) audioSource.stop();
+      pauseTime = (audioCtx.currentTime - startTime) * 1000;
+      isPlaying = false;
+      document.getElementById('play-btn').innerText = 'Play (Space)';
+    }
+
+    function seekTo(ms) {
+      const wasPlaying = isPlaying;
+      if (isPlaying) pauseAudio();
+      pauseTime = Math.max(0, ms);
+      currentMs = pauseTime;
+      if (wasPlaying) playAudio();
+      updateTimelineScroll();
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+        e.preventDefault();
+        togglePlay();
+      }
+    });
+
+    /**
+     * Judgment Line Math & State Interpolation
+     */
+    function interpolate(t, sT, eT, sV, eV) {
+      if (t <= sT) return sV;
+      if (t >= eT) return eV;
+      return sV + (eV - sV) * ((t - sT) / (eT - sT));
+    }
+
+    function getLineState(line, ms) {
+      let x = 0.5, y = 0.5;
+      for (const ev of line.moveEvents) {
+        if (ms >= ev.startTime && ms <= ev.endTime) {
+          x = interpolate(ms, ev.startTime, ev.endTime, ev.startX, ev.endX);
+          y = interpolate(ms, ev.startTime, ev.endTime, ev.startY, ev.endY);
+          break;
+        } else if (ms > ev.endTime) {
+          x = ev.endX; y = ev.endY;
+        }
+      }
+      let angle = 0;
+      for (const ev of line.rotateEvents) {
+        if (ms >= ev.startTime && ms <= ev.endTime) {
+          angle = interpolate(ms, ev.startTime, ev.endTime, ev.startAngle, ev.endAngle);
+          break;
+        } else if (ms > ev.endTime) {
+          angle = ev.endAngle;
+        }
+      }
+      let alpha = 1.0;
+      for (const ev of line.alphaEvents) {
+        if (ms >= ev.startTime && ms <= ev.endTime) {
+          alpha = interpolate(ms, ev.startTime, ev.endTime, ev.startAlpha, ev.endAlpha);
+          break;
+        } else if (ms > ev.endTime) {
+          alpha = ev.endAlpha;
+        }
+      }
+      return { x: x * stageW, y: y * stageH, angle, alpha };
+    }
+
+    /**
+     * Stamping Notes by Clicking the Stage Viewport
+     */
+    stageCanvas.addEventListener('mousedown', (e) => {
+      const rect = stageCanvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      const activeLine = chart.lines[0];
+      const state = getLineState(activeLine, currentMs);
+      const rad = (-state.angle * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+
+      // Convert global coordinate to local judgment line coordinate
+      const dx = clickX - state.x;
+      const dy = clickY - state.y;
+      const localX = dx * cos - dy * sin;
+
+      const holdTime = parseInt(document.getElementById('tool-holdtime').value) || 0;
+      const speed = parseFloat(document.getElementById('tool-speed').value) || 1.0;
+      const isAbove = document.getElementById('tool-side').value === 'above';
+
+      // Snap time to grid if active
+      const snapFraction = parseInt(document.getElementById('grid-snap').value);
+      const bpm = parseFloat(document.getElementById('meta-bpm').value) || 120;
+      const beatMs = (60000 / bpm) / (snapFraction / 4);
+      const snappedTime = Math.round(currentMs / beatMs) * beatMs;
+
+      const newNote = {
+        type: selectedType,
+        time: Math.round(snappedTime),
+        posX: Math.round(localX),
+        speed: speed,
+        isAbove: isAbove
+      };
+
+      if (selectedType === 'hold') {
+        newNote.holdTime = holdTime;
+      }
+
+      activeLine.notes.push(newNote);
+      updateStats();
+      drawTimeline();
+    });
+
+    function addRotateKeyframe() {
+      const activeLine = chart.lines[0];
+      const targetAngle = prompt('Enter target rotation angle in degrees:', '45');
+      if (targetAngle === null) return;
+      activeLine.rotateEvents.push({
+        startTime: Math.round(currentMs),
+        endTime: Math.round(currentMs + 1000),
+        startAngle: 0,
+        endAngle: parseFloat(targetAngle)
+      });
+      updateStats();
+    }
+
+    function addMoveKeyframe() {
+      const activeLine = chart.lines[0];
+      activeLine.moveEvents.push({
+        startTime: Math.round(currentMs),
+        endTime: Math.round(currentMs + 1000),
+        startX: 0.5,
+        startY: 0.5,
+        endX: 0.5,
+        endY: 0.3
+      });
+      updateStats();
+    }
+
+    function updateStats() {
+      document.getElementById('stat-notecount').innerText = chart.lines[0].notes.length;
+      document.getElementById('stat-events').innerText = 
+        chart.lines[0].moveEvents.length + chart.lines[0].rotateEvents.length;
+    }
+
+    /**
+     * Continuous Studio Render Loop
+     */
+    function renderStudio() {
+      if (isPlaying) {
+        currentMs = (audioCtx.currentTime - startTime) * 1000;
+        updateTimelineScroll();
+      }
+
+      // Format time readout
+      const totalSec = Math.floor(currentMs / 1000);
+      const m = Math.floor(totalSec / 60).toString().padStart(2, '0');
+      const s = (totalSec % 60).toString().padStart(2, '0');
+      const ms = Math.floor(currentMs % 1000).toString().padStart(3, '0');
+      document.getElementById('time-display').innerText = `${m}:${s}.${ms}`;
+
+      // 1. Render Stage Canvas
+      stageCtx.clearRect(0, 0, stageW, stageH);
+
+      const activeLine = chart.lines[0];
+      const state = getLineState(activeLine, currentMs);
+
+      stageCtx.save();
+      stageCtx.translate(state.x, state.y);
+      stageCtx.rotate((state.angle * Math.PI) / 180);
+      stageCtx.globalAlpha = state.alpha;
+
+      // Draw Judgment Line
+      stageCtx.strokeStyle = '#ffffff';
+      stageCtx.lineWidth = 3;
+      stageCtx.beginPath();
+      stageCtx.moveTo(-stageW * 2, 0);
+      stageCtx.lineTo(stageW * 2, 0);
+      stageCtx.stroke();
+
+      // Draw Approaching Notes
+      activeLine.notes.forEach(note => {
+        const dt = note.time - currentMs;
+        const side = note.isAbove ? -1 : 1;
+        const speedFactor = note.speed * (stageH * 0.0012);
+        const yOffset = dt * speedFactor * side;
+
+        // Render if within view range
+        if (Math.abs(yOffset) < stageH * 1.5) {
+          drawNote(stageCtx, note.posX, yOffset, note, side);
+        }
+      });
+
+      stageCtx.restore();
+
+      requestAnimationFrame(renderStudio);
+    }
+    requestAnimationFrame(renderStudio);
+
+    function drawNote(ctx, x, y, note, side) {
+      const nw = 70;
+      const nh = 8;
+      ctx.save();
+      ctx.translate(x, y);
+
+      switch (note.type) {
+        case 'tap':
+          ctx.fillStyle = '#79c0ff';
+          ctx.fillRect(-nw / 2, -nh / 2, nw, nh);
+          ctx.strokeStyle = '#ffffff';
+          ctx.strokeRect(-nw / 2, -nh / 2, nw, nh);
+          break;
+        case 'drag':
+          ctx.fillStyle = '#ffe57f';
+          ctx.beginPath();
+          ctx.moveTo(0, -nh * 1.3);
+          ctx.lineTo(nw * 0.3, 0);
+          ctx.lineTo(0, nh * 1.3);
+          ctx.lineTo(-nw * 0.3, 0);
+          ctx.closePath();
+          ctx.fill();
+          break;
+        case 'hold':
+          const holdLength = (note.holdTime * note.speed * (stageH * 0.0012)) * -side;
+          ctx.fillStyle = 'rgba(86, 211, 100, 0.4)';
+          ctx.fillRect(-nw / 2, 0, nw, holdLength);
+          ctx.fillStyle = '#56d364';
+          ctx.fillRect(-nw / 2, -nh / 2, nw, nh);
+          break;
+        case 'flick':
+          ctx.fillStyle = '#ff7b72';
+          ctx.beginPath();
+          ctx.moveTo(-nw / 2, nh);
+          ctx.lineTo(0, -nh);
+          ctx.lineTo(nw / 2, nh);
+          ctx.closePath();
+          ctx.fill();
+          break;
+      }
+      ctx.restore();
+    }
+
+    /**
+     * Bottom Timeline Scrubber & Canvas
+     */
+    function drawTimeline() {
+      if (!tlCanvas.width) return;
+      tlCtx.clearRect(0, 0, tlCanvas.width, tlCanvas.height);
+
+      // Background grid lines based on BPM
+      const bpm = parseFloat(document.getElementById('meta-bpm').value) || 120;
+      const beatInterval = (60 / bpm) * 100; // pixels per beat
+
+      tlCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      for (let x = 0; x < tlCanvas.width; x += beatInterval) {
+        tlCtx.beginPath();
+        tlCtx.moveTo(x, 0);
+        tlCtx.lineTo(x, tlCanvas.height);
+        tlCtx.stroke();
+      }
+
+      // Draw Placed Notes on Timeline
+      chart.lines[0].notes.forEach(note => {
+        const x = (note.time / 1000) * 100;
+        let color = '#79c0ff';
+        if (note.type === 'drag') color = '#ffe57f';
+        if (note.type === 'hold') color = '#56d364';
+        if (note.type === 'flick') color = '#ff7b72';
+
+        tlCtx.fillStyle = color;
+        tlCtx.fillRect(x - 3, 20, 6, tlCanvas.height - 40);
+      });
+    }
+
+    function updateTimelineScroll() {
+      const scrollPos = (currentMs / 1000) * 100 - (window.innerWidth / 2);
+      document.getElementById('timeline-scroll').scrollLeft = Math.max(0, scrollPos);
+    }
+
+    // Scrub by clicking the timeline
+    tlCanvas.addEventListener('click', (e) => {
+      const rect = tlCanvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const targetSec = clickX / 100;
+      seekTo(targetSec * 1000);
+    });
+
+    /**
+     * Export chart.json and info.json
+     */
+    function exportPackage() {
+      // Sort notes chronologically before saving
+      chart.lines[0].notes.sort((a, b) => a.time - b.time);
+
+      const chartJson = JSON.stringify(chart, null, 2);
+      const infoJson = JSON.stringify({
+        title: document.getElementById('meta-title').value,
+        artist: document.getElementById('meta-artist').value,
+        bpm: parseFloat(document.getElementById('meta-bpm').value),
+        difficulty: document.getElementById('meta-level').value,
+        chart: "chart.json",
+        audio: "audio.mp3",
+        bg: "bg.jpg"
+      }, null, 2);
+
+      downloadFile(chartJson, 'chart.json', 'application/json');
+      setTimeout(() => {
+        downloadFile(infoJson, 'info.json', 'application/json');
+      }, 300);
+    }
+
+    function downloadFile(content, fileName, contentType) {
+      const blob = new Blob([content], { type: contentType });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+  </script>
+</body>
+</html>
