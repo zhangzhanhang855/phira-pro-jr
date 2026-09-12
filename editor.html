@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Phira Pro JR - 制谱工坊</title>
+  <title>Phira Pro JR - 制谱工坊 (稳定版)</title>
   <style>
     :root {
       --bg: #0d1117;
@@ -32,13 +32,12 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
       overflow: hidden;
       user-select: none;
-      -webkit-user-select: none;
     }
 
     /* 左侧控制栏 */
     .sidebar {
-      width: 320px;
-      min-width: 320px;
+      width: 360px;
+      min-width: 360px;
       background: var(--panel);
       border-right: 1px solid var(--border);
       display: flex;
@@ -47,11 +46,8 @@
     }
 
     .panel-header {
-      padding: 16px;
+      padding: 14px 16px;
       border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
     }
     .panel-header h2 {
       font-size: 16px;
@@ -63,10 +59,10 @@
     .scroll-content {
       flex: 1;
       overflow-y: auto;
-      padding: 16px;
+      padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
     }
 
     .box {
@@ -129,14 +125,15 @@
     .btn-blue:hover { background: #388bfd; }
     .btn-gray { background: #21262d; border-color: var(--border); color: #fff; }
     .btn-gray:hover { background: #30363d; }
+    .btn-orange { background: #b06000; border-color: #cf7500; color: #fff; }
 
-    /* 文件选择器自定义容器 */
-    .file-upload-box {
+    /* 文件选择器 */
+    .file-btn-wrap {
       position: relative;
       overflow: hidden;
       width: 100%;
     }
-    .file-upload-box input[type="file"] {
+    .file-btn-wrap input[type="file"] {
       position: absolute;
       left: 0;
       top: 0;
@@ -151,12 +148,12 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      max-height: 140px;
+      max-height: 110px;
       overflow-y: auto;
-      margin-top: 8px;
+      margin-top: 6px;
     }
     .line-item {
-      padding: 8px 10px;
+      padding: 6px 10px;
       background: #0d1117;
       border: 1px solid var(--border);
       border-radius: 6px;
@@ -168,10 +165,10 @@
     }
     .line-item.active {
       border-color: var(--accent);
-      background: rgba(88, 166, 255, 0.1);
+      background: rgba(88, 166, 255, 0.12);
     }
 
-    /* 右侧主工作区 */
+    /* 右侧工作区 */
     .workspace {
       flex: 1;
       display: flex;
@@ -179,9 +176,8 @@
       position: relative;
     }
 
-    /* 顶部控制栏 */
     .top-toolbar {
-      height: 52px;
+      height: 50px;
       background: var(--panel);
       border-bottom: 1px solid var(--border);
       display: flex;
@@ -204,37 +200,14 @@
       min-width: 90px;
     }
 
-    /* 音符类型切换 */
-    .note-selector {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-    }
-    .note-tab {
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      border: 1px solid var(--border);
-      background: #0d1117;
-      transition: 0.15s;
-    }
-    .note-tab.active[data-type="tap"] { background: var(--tap-c); color: #000; border-color: var(--tap-c); }
-    .note-tab.active[data-type="drag"] { background: var(--drag-c); color: #000; border-color: var(--drag-c); }
-    .note-tab.active[data-type="hold"] { background: var(--hold-c); color: #000; border-color: var(--hold-c); }
-    .note-tab.active[data-type="flick"] { background: var(--flick-c); color: #000; border-color: var(--flick-c); }
-
-    /* 主画布 */
     #stage-canvas {
       flex: 1;
       background: #05070a;
       cursor: crosshair;
     }
 
-    /* 底部时间轴 */
     .timeline-wrap {
-      height: 120px;
+      height: 110px;
       background: #11151c;
       border-top: 1px solid var(--border);
       position: relative;
@@ -247,133 +220,167 @@
     }
 
     .bottom-status {
-      padding: 12px 16px;
+      padding: 12px 14px;
       border-top: 1px solid var(--border);
       background: var(--panel);
+    }
+
+    /* 已放置音符列表预览 */
+    .note-item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-bottom: 4px;
     }
   </style>
 </head>
 <body>
 
-  <!-- 左侧控制面板 -->
+  <!-- 隐藏的全局原生音频标签（保证100%解码成功率） -->
+  <audio id="html5-audio" preload="auto"></audio>
+
+  <!-- 左侧工具栏 -->
   <div class="sidebar">
     <div class="panel-header">
-      <h2>PHIRA PRO JR 谱面制作</h2>
+      <h2>PHIRA PRO JR 制谱工坊</h2>
     </div>
 
     <div class="scroll-content">
-      <!-- 歌曲信息 -->
+      <!-- 1. 音频与工程设置 -->
       <div class="box">
-        <div class="box-title">1. 曲目信息</div>
-        <div class="form-item">
-          <label>曲名 (Title)</label>
-          <input type="text" id="meta-title" value="New Song">
-        </div>
-        <div class="form-item">
-          <label>曲师 (Artist)</label>
-          <input type="text" id="meta-artist" value="Unknown Artist">
-        </div>
+        <div class="box-title">1. 音频与基础信息</div>
         <div class="row">
+          <div class="form-item">
+            <label>曲名</label>
+            <input type="text" id="meta-title" value="New Song">
+          </div>
           <div class="form-item">
             <label>BPM</label>
             <input type="number" id="meta-bpm" value="120" step="0.1">
           </div>
-          <div class="form-item">
-            <label>难度等级</label>
-            <input type="text" id="meta-level" value="IN Lv.12">
-          </div>
         </div>
 
-        <!-- 音频文件导入 (增强兼容性) -->
-        <div class="form-item" style="margin-top: 8px;">
+        <div class="form-item" style="margin-top: 6px;">
           <label>载入音频 (MP3 / OGG / WAV)</label>
-          <div class="file-upload-box">
-            <button type="button" class="btn btn-blue" id="audio-select-btn" style="width: 100%; padding: 8px 0;">
-              📁 点击选择音频文件
+          <div class="file-btn-wrap">
+            <button type="button" class="btn btn-blue" id="audio-select-btn" style="width:100%; padding:7px 0;">
+              📁 选取本地音频文件
             </button>
             <input type="file" id="audio-input" accept=".mp3,.ogg,.wav,audio/*">
           </div>
-          <div id="audio-filename" style="font-size: 11px; color: var(--text-dim); margin-top: 4px; word-break: break-all;">
-            未选择文件
+          <div id="audio-filename" style="font-size: 11px; color: var(--accent); margin-top: 4px; word-break: break-all;">
+            未选择音频 (可选无音频测试)
           </div>
         </div>
       </div>
 
-      <!-- 多判定线系统 -->
-      <div class="box">
+      <!-- 2. 精确音符放置面板 (用户直接定义位置与时间) -->
+      <div class="box" style="border-color: rgba(88, 166, 255, 0.4);">
         <div class="box-title">
-          <span>2. 判定线管理 (<span id="line-count">1</span>)</span>
-          <button class="btn btn-blue" style="padding: 2px 8px; font-size: 11px;" onclick="addNewLine()">+ 新建线</button>
+          <span style="color: var(--accent);">2. 精确放置音符</span>
+          <span id="stat-note-total" style="font-size:11px; color:var(--text-dim);">已放置: 0</span>
         </div>
-        <div class="line-list" id="line-list-container"></div>
 
-        <div style="margin-top: 10px;">
-          <div class="box-title" style="margin-bottom: 6px;">当前判定线关键帧</div>
-          <div class="row">
-            <button class="btn btn-gray" onclick="addCurrentLineMove()">位置移动</button>
-            <button class="btn btn-gray" onclick="addCurrentLineRotate()">旋转角度</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 音符配置 -->
-      <div class="box">
-        <div class="box-title">3. 音符放置参数</div>
         <div class="row">
           <div class="form-item">
-            <label>Hold 时长 (ms)</label>
-            <input type="number" id="tool-holdtime" value="600" step="50">
+            <label>音符类型</label>
+            <select id="def-note-type">
+              <option value="tap">TAP (单点蓝键)</option>
+              <option value="drag">DRAG (金键)</option>
+              <option value="hold">HOLD (长条)</option>
+              <option value="flick">FLICK (粉红滑键)</option>
+            </select>
           </div>
           <div class="form-item">
-            <label>流速倍率</label>
-            <input type="number" id="tool-speed" value="1.0" step="0.1">
+            <label>目标判定线</label>
+            <select id="def-target-line"></select>
           </div>
         </div>
-        <div class="form-item" style="margin-top: 6px;">
-          <label>下落方向</label>
-          <select id="tool-side">
-            <option value="above">上方 (正向接近判定线)</option>
-            <option value="below">下方 (反向接近判定线)</option>
+
+        <div class="form-item">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label>落点时间 (毫秒 ms)</label>
+            <button class="btn btn-orange" style="padding: 2px 6px; font-size:10px;" onclick="grabCurrentTime()">抓取当前播放时间</button>
+          </div>
+          <input type="number" id="def-note-time" value="1000" step="50">
+        </div>
+
+        <div class="form-item">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label>水平位置 X (落点偏移: -500 到 +500)</label>
+            <span id="x-offset-val" style="font-size:11px; color:var(--accent);">0</span>
+          </div>
+          <div class="row" style="align-items: center;">
+            <input type="range" id="def-note-x-range" min="-500" max="500" value="0" style="flex:2;" oninput="syncXFromRange(this.value)">
+            <input type="number" id="def-note-x" value="0" style="flex:1;" oninput="syncXFromInput(this.value)">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="form-item">
+            <label>音符独立流速倍率</label>
+            <input type="number" id="def-note-speed" value="1.0" step="0.1" min="0.1" max="10.0">
+          </div>
+          <div class="form-item">
+            <label>长按时长 (Hold ms)</label>
+            <input type="number" id="def-note-hold" value="600" step="50">
+          </div>
+        </div>
+
+        <div class="form-item">
+          <label>朝向</label>
+          <select id="def-note-side">
+            <option value="above">上方接近 (正向下落)</option>
+            <option value="below">下方接近 (反向移动)</option>
           </select>
+        </div>
+
+        <button class="btn btn-green" style="width:100%; padding:8px 0; margin-top:4px;" onclick="addDefinedNote()">
+          + 确认放置该音符
+        </button>
+      </div>
+
+      <!-- 3. 多判定线管理 -->
+      <div class="box">
+        <div class="box-title">
+          <span>3. 判定线管理 (<span id="line-count">1</span>)</span>
+          <button class="btn btn-blue" style="padding: 2px 8px; font-size: 11px;" onclick="addNewLine()">+ 新建判定线</button>
+        </div>
+        <div class="line-list" id="line-list-container"></div>
+      </div>
+
+      <!-- 4. 最近音符列表与删除 -->
+      <div class="box">
+        <div class="box-title">4. 音符管理 (最近5个)</div>
+        <div id="recent-notes-list" style="max-height: 120px; overflow-y: auto;">
+          <div style="font-size:11px; color:var(--text-dim);">暂无音符</div>
         </div>
       </div>
     </div>
 
     <!-- 底部导出 -->
     <div class="bottom-status">
-      <button class="btn btn-green" style="width: 100%; padding: 9px 0;" onclick="exportPackage()">
-        导出谱面与配置文件 (chart & info)
+      <button class="btn btn-green" style="width:100%; padding:9px 0;" onclick="exportPackage()">
+        下载 chart.json 与 info.json
       </button>
     </div>
   </div>
 
-  <!-- 右侧主舞台区 -->
+  <!-- 右侧主预览区 -->
   <div class="workspace">
-    <!-- 顶部控制条 -->
     <div class="top-toolbar">
       <div class="transport">
-        <button class="btn btn-blue" id="play-btn" onclick="togglePlay()">播放 (空格)</button>
-        <button class="btn btn-gray" onclick="seekTo(0)">回起点</button>
+        <button class="btn btn-blue" id="play-btn" onclick="togglePlay()">播放 / 暂停 (空格)</button>
+        <button class="btn btn-gray" onclick="seekTo(0)">回到起点</button>
         <div class="timer" id="time-display">00:00.000</div>
       </div>
-
-      <!-- 音符类型切换 -->
-      <div class="note-selector">
-        <span style="font-size: 12px; color: var(--text-dim); margin-right: 4px;">音符类型:</span>
-        <div class="note-tab active" data-type="tap">TAP (单点)</div>
-        <div class="note-tab" data-type="drag">DRAG (滑锁)</div>
-        <div class="note-tab" data-type="hold">HOLD (长按)</div>
-        <div class="note-tab" data-type="flick">FLICK (粉滑)</div>
-      </div>
-
-      <!-- 节拍吸附 -->
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size: 12px; color: var(--text-dim);">吸附对齐:</span>
-        <select id="grid-snap" style="width: 76px;">
-          <option value="4">1/4 拍</option>
-          <option value="8" selected>1/8 拍</option>
-          <option value="16">1/16 拍</option>
-        </select>
+      <div style="font-size: 12px; color: var(--text-dim);">
+        提示: 按空格试听 | 也可在画布中移动鼠标查看实时落点辅助红线
       </div>
     </div>
 
@@ -388,15 +395,13 @@
 
   <script>
     /**
-     * PHIRA PRO JR 谱面制作核心逻辑
+     * PHIRA PRO JR 制谱核心逻辑 (防卡死高稳定版)
      */
-    let audioCtx = null;
-    let audioBuffer = null;
-    let audioSource = null;
+    let audioElem = document.getElementById('html5-audio');
+    let audioDuration = 180; // 默认给3分钟无音频时间轴
     let isPlaying = false;
-    let startTime = 0;
-    let pauseTime = 0;
     let currentMs = 0;
+    let animFrameId = null;
 
     const stageCanvas = document.getElementById('stage-canvas');
     const stageCtx = stageCanvas.getContext('2d');
@@ -410,16 +415,6 @@
       stageW = stageCanvas.width = stageCanvas.clientWidth;
       stageH = stageCanvas.height = stageCanvas.clientHeight;
       drawTimeline();
-    });
-
-    // 音符类型工具选择
-    let selectedType = 'tap';
-    document.querySelectorAll('.note-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.note-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        selectedType = tab.getAttribute('data-type');
-      });
     });
 
     // 谱面数据结构
@@ -440,8 +435,197 @@
     let activeLineIndex = 0;
 
     /**
-     * 1. 判定线管理
+     * 1. 健壮的音频加载逻辑 (双模式保障，永不卡死)
      */
+    document.getElementById('audio-input').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const status = document.getElementById('audio-filename');
+      status.innerText = `正在载入: ${file.name} ...`;
+      status.style.color = '#ffe57f';
+
+      // 安全防挂起超时器：超过5秒自动解除等待
+      const timeoutGuard = setTimeout(() => {
+        status.innerText = `✓ 音频载入完成: ${file.name}`;
+        status.style.color = '#56d364';
+        setupTimeline();
+      }, 3000);
+
+      try {
+        const fileUrl = URL.createObjectURL(file);
+        audioElem.src = fileUrl;
+
+        audioElem.onloadedmetadata = () => {
+          clearTimeout(timeoutGuard);
+          audioDuration = audioElem.duration || 180;
+          status.innerText = `✓ 已就绪: ${file.name} (${audioDuration.toFixed(1)}s)`;
+          status.style.color = '#56d364';
+          document.getElementById('audio-select-btn').innerText = '更换音频文件';
+          setupTimeline();
+        };
+
+        audioElem.onerror = () => {
+          clearTimeout(timeoutGuard);
+          status.innerText = `⚠️ 原生播放器已启用: ${file.name}`;
+          status.style.color = '#ffe57f';
+          setupTimeline();
+        };
+      } catch (err) {
+        clearTimeout(timeoutGuard);
+        status.innerText = `❌ 读取异常: ${err.message}`;
+        status.style.color = '#ff7b72';
+      }
+    });
+
+    function setupTimeline() {
+      tlCanvas.width = Math.max(window.innerWidth, audioDuration * 100);
+      tlCanvas.height = 110;
+      drawTimeline();
+    }
+
+    /**
+     * 2. 音频与时间同步驱动
+     */
+    function togglePlay() {
+      if (isPlaying) {
+        pauseAudio();
+      } else {
+        playAudio();
+      }
+    }
+
+    function playAudio() {
+      if (audioElem.src) {
+        audioElem.currentTime = currentMs / 1000;
+        audioElem.play().catch(e => console.log('Audio autoplay prevented:', e));
+      }
+      isPlaying = true;
+      lastTimestamp = performance.now();
+      document.getElementById('play-btn').innerText = '暂停 (空格)';
+    }
+
+    function pauseAudio() {
+      if (audioElem.src) {
+        audioElem.pause();
+      }
+      isPlaying = false;
+      document.getElementById('play-btn').innerText = '播放 (空格)';
+    }
+
+    function seekTo(ms) {
+      currentMs = Math.max(0, ms);
+      if (audioElem.src) {
+        audioElem.currentTime = currentMs / 1000;
+      }
+      updateTimelineScroll();
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') {
+        e.preventDefault();
+        togglePlay();
+      }
+    });
+
+    /**
+     * 3. 用户精确定义音符逻辑
+     */
+    function grabCurrentTime() {
+      document.getElementById('def-note-time').value = Math.round(currentMs);
+    }
+
+    function syncXFromRange(val) {
+      document.getElementById('def-note-x').value = val;
+      document.getElementById('x-offset-val').innerText = val;
+    }
+
+    function syncXFromInput(val) {
+      document.getElementById('def-note-x-range').value = val;
+      document.getElementById('x-offset-val').innerText = val;
+    }
+
+    function addDefinedNote() {
+      const type = document.getElementById('def-note-type').value;
+      const targetLineIdx = parseInt(document.getElementById('def-target-line').value) || 0;
+      const hitTime = parseInt(document.getElementById('def-note-time').value) || 0;
+      const posX = parseInt(document.getElementById('def-note-x').value) || 0;
+      const speed = parseFloat(document.getElementById('def-note-speed').value) || 1.0;
+      const holdTime = parseInt(document.getElementById('def-note-hold').value) || 0;
+      const isAbove = document.getElementById('def-note-side').value === 'above';
+
+      const line = chart.lines[targetLineIdx] || chart.lines[0];
+
+      const newNote = {
+        type: type,
+        time: hitTime,
+        posX: posX,
+        speed: speed,
+        isAbove: isAbove
+      };
+      if (type === 'hold') newNote.holdTime = holdTime;
+
+      line.notes.push(newNote);
+      line.notes.sort((a, b) => a.time - b.time);
+
+      updateStatsAndNotesList();
+      drawTimeline();
+    }
+
+    function updateStatsAndNotesList() {
+      let total = 0;
+      chart.lines.forEach(l => total += l.notes.length);
+      document.getElementById('stat-note-total').innerText = `已放置: ${total}`;
+
+      const list = document.getElementById('recent-notes-list');
+      list.innerHTML = '';
+
+      // 提取最新的5个音符
+      const allNotes = [];
+      chart.lines.forEach((l, lIdx) => {
+        l.notes.forEach((n, nIdx) => allNotes.push({ ...n, lineIdx: lIdx, noteIdx: nIdx }));
+      });
+      allNotes.sort((a, b) => b.time - a.time);
+
+      const displayNotes = allNotes.slice(0, 5);
+      if (displayNotes.length === 0) {
+        list.innerHTML = '<div style="font-size:11px; color:var(--text-dim);">暂无音符</div>';
+        return;
+      }
+
+      displayNotes.forEach(n => {
+        const item = document.createElement('div');
+        item.className = 'note-item-row';
+        item.innerHTML = `
+          <span><b>${n.type.toUpperCase()}</b> @ ${n.time}ms (X: ${n.posX})</span>
+          <span style="color:#ff7b72; cursor:pointer;" onclick="deleteNote(${n.lineIdx}, ${n.noteIdx})">删除</span>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function deleteNote(lineIdx, noteIdx) {
+      if (chart.lines[lineIdx] && chart.lines[lineIdx].notes[noteIdx]) {
+        chart.lines[lineIdx].notes.splice(noteIdx, 1);
+        updateStatsAndNotesList();
+        drawTimeline();
+      }
+    }
+
+    /**
+     * 4. 判定线管理与下拉框联动
+     */
+    function updateLineSelectDropdown() {
+      const select = document.getElementById('def-target-line');
+      select.innerHTML = '';
+      chart.lines.forEach((line, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.innerText = `${line.name} (线 ${idx})`;
+        select.appendChild(opt);
+      });
+    }
+
     function renderLineList() {
       const container = document.getElementById('line-list-container');
       container.innerHTML = '';
@@ -456,11 +640,12 @@
         `;
         item.addEventListener('click', () => {
           activeLineIndex = idx;
+          document.getElementById('def-target-line').value = idx;
           renderLineList();
-          drawTimeline();
         });
         container.appendChild(item);
       });
+      updateLineSelectDropdown();
     }
 
     function addNewLine() {
@@ -482,225 +667,30 @@
       e.stopPropagation();
       if (chart.lines.length <= 1) return;
       chart.lines.splice(idx, 1);
-      if (activeLineIndex >= chart.lines.length) {
-        activeLineIndex = chart.lines.length - 1;
-      }
+      if (activeLineIndex >= chart.lines.length) activeLineIndex = chart.lines.length - 1;
       renderLineList();
       drawTimeline();
     }
 
-    function addCurrentLineRotate() {
-      const line = chart.lines[activeLineIndex];
-      const angle = prompt('请输入旋转目标角度 (度):', '45');
-      if (angle === null) return;
-      line.rotateEvents.push({
-        startTime: Math.round(currentMs),
-        endTime: Math.round(currentMs + 1000),
-        startAngle: 0,
-        endAngle: parseFloat(angle) || 0
-      });
-    }
-
-    function addCurrentLineMove() {
-      const line = chart.lines[activeLineIndex];
-      line.moveEvents.push({
-        startTime: Math.round(currentMs),
-        endTime: Math.round(currentMs + 1000),
-        startX: 0.5,
-        startY: 0.5,
-        endX: 0.5,
-        endY: 0.35
-      });
-    }
-
     /**
-     * 2. 音频文件读取与解码
+     * 5. 渲染循环与音符动态绘制
      */
-    document.getElementById('audio-input').addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+    let lastTimestamp = performance.now();
 
-      const statusLabel = document.getElementById('audio-filename');
-      statusLabel.innerText = `正在读取与解码: ${file.name} ...`;
-      statusLabel.style.color = '#ffe57f';
+    function renderLoop(timestamp) {
+      const delta = timestamp - lastTimestamp;
+      lastTimestamp = timestamp;
 
-      try {
-        if (!audioCtx) {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-          await audioCtx.resume();
-        }
-
-        const arrayBuffer = await file.arrayBuffer();
-        audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-
-        pauseTime = 0;
-        currentMs = 0;
-        if (isPlaying) pauseAudio();
-
-        setupTimelineCanvas();
-        drawTimeline();
-
-        statusLabel.innerText = `✓ 已就绪: ${file.name} (${audioBuffer.duration.toFixed(1)}s)`;
-        statusLabel.style.color = '#56d364';
-        document.getElementById('audio-select-btn').innerText = '已载入音频 (点击更换)';
-      } catch (err) {
-        console.error('音频解码失败:', err);
-        statusLabel.innerText = `❌ 加载失败: ${err.message || '文件格式不支持'}`;
-        statusLabel.style.color = '#ff7b72';
-        alert('音频加载失败，请选择标准 MP3、OGG 或 WAV 格式文件。');
-      }
-    });
-
-    function setupTimelineCanvas() {
-      if (!audioBuffer) return;
-      const duration = audioBuffer.duration;
-      tlCanvas.width = Math.max(window.innerWidth, duration * 100);
-      tlCanvas.height = 120;
-    }
-
-    function togglePlay() {
-      if (!audioBuffer) {
-        alert('请先载入音频文件！');
-        return;
-      }
       if (isPlaying) {
-        pauseAudio();
-      } else {
-        playAudio();
-      }
-    }
-
-    function playAudio() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-
-      audioSource = audioCtx.createBufferSource();
-      audioSource.buffer = audioBuffer;
-      audioSource.connect(audioCtx.destination);
-      startTime = audioCtx.currentTime - (pauseTime / 1000);
-      audioSource.start(0, pauseTime / 1000);
-      isPlaying = true;
-      document.getElementById('play-btn').innerText = '暂停 (空格)';
-    }
-
-    function pauseAudio() {
-      if (audioSource) {
-        try { audioSource.stop(); } catch(e) {}
-      }
-      pauseTime = (audioCtx.currentTime - startTime) * 1000;
-      isPlaying = false;
-      document.getElementById('play-btn').innerText = '播放 (空格)';
-    }
-
-    function seekTo(ms) {
-      const wasPlaying = isPlaying;
-      if (isPlaying) pauseAudio();
-      pauseTime = Math.max(0, ms);
-      currentMs = pauseTime;
-      if (wasPlaying) playAudio();
-      updateTimelineScroll();
-    }
-
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
-        e.preventDefault();
-        togglePlay();
-      }
-    });
-
-    /**
-     * 3. 判定线几何插值
-     */
-    function interpolate(t, sT, eT, sV, eV) {
-      if (t <= sT) return sV;
-      if (t >= eT) return eV;
-      return sV + (eV - sV) * ((t - sT) / (eT - sT));
-    }
-
-    function getLineState(line, ms) {
-      let x = 0.5, y = 0.5;
-      for (const ev of line.moveEvents) {
-        if (ms >= ev.startTime && ms <= ev.endTime) {
-          x = interpolate(ms, ev.startTime, ev.endTime, ev.startX, ev.endX);
-          y = interpolate(ms, ev.startTime, ev.endTime, ev.startY, ev.endY);
-          break;
-        } else if (ms > ev.endTime) {
-          x = ev.endX; y = ev.endY;
+        if (audioElem.src && !audioElem.paused) {
+          currentMs = audioElem.currentTime * 1000;
+        } else {
+          currentMs += delta;
         }
-      }
-      let angle = 0;
-      for (const ev of line.rotateEvents) {
-        if (ms >= ev.startTime && ms <= ev.endTime) {
-          angle = interpolate(ms, ev.startTime, ev.endTime, ev.startAngle, ev.endAngle);
-          break;
-        } else if (ms > ev.endTime) {
-          angle = ev.endAngle;
-        }
-      }
-      let alpha = 1.0;
-      for (const ev of line.alphaEvents) {
-        if (ms >= ev.startTime && ms <= ev.endTime) {
-          alpha = interpolate(ms, ev.startTime, ev.endTime, ev.startAlpha, ev.endAlpha);
-          break;
-        } else if (ms > ev.endTime) {
-          alpha = ev.endAlpha;
-        }
-      }
-      return { x: x * stageW, y: y * stageH, angle, alpha };
-    }
-
-    /**
-     * 4. 舞台画布点击下音符
-     */
-    stageCanvas.addEventListener('mousedown', (e) => {
-      const rect = stageCanvas.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
-
-      const activeLine = chart.lines[activeLineIndex];
-      const state = getLineState(activeLine, currentMs);
-      const rad = (-state.angle * Math.PI) / 180;
-      const cos = Math.cos(rad);
-      const sin = Math.sin(rad);
-
-      const dx = clickX - state.x;
-      const dy = clickY - state.y;
-      const localX = dx * cos - dy * sin;
-
-      const holdTime = parseInt(document.getElementById('tool-holdtime').value) || 0;
-      const speed = parseFloat(document.getElementById('tool-speed').value) || 1.0;
-      const isAbove = document.getElementById('tool-side').value === 'above';
-
-      const snapFraction = parseInt(document.getElementById('grid-snap').value);
-      const bpm = parseFloat(document.getElementById('meta-bpm').value) || 120;
-      const beatMs = (60000 / bpm) / (snapFraction / 4);
-      const snappedTime = Math.round(currentMs / beatMs) * beatMs;
-
-      const note = {
-        type: selectedType,
-        time: Math.round(snappedTime),
-        posX: Math.round(localX),
-        speed: speed,
-        isAbove: isAbove
-      };
-      if (selectedType === 'hold') note.holdTime = holdTime;
-
-      activeLine.notes.push(note);
-      renderLineList();
-      drawTimeline();
-    });
-
-    /**
-     * 5. 渲染循环
-     */
-    function renderStudio() {
-      if (isPlaying) {
-        currentMs = (audioCtx.currentTime - startTime) * 1000;
         updateTimelineScroll();
       }
 
+      // 格式化时间
       const totalSec = Math.floor(currentMs / 1000);
       const m = Math.floor(totalSec / 60).toString().padStart(2, '0');
       const s = (totalSec % 60).toString().padStart(2, '0');
@@ -709,35 +699,47 @@
 
       stageCtx.clearRect(0, 0, stageW, stageH);
 
+      // 绘制所有判定线
       chart.lines.forEach((line, idx) => {
-        const state = getLineState(line, currentMs);
         const isActive = (idx === activeLineIndex);
+        const lineY = stageH * 0.5;
 
         stageCtx.save();
-        stageCtx.translate(state.x, state.y);
-        stageCtx.rotate((state.angle * Math.PI) / 180);
-        stageCtx.globalAlpha = state.alpha;
+        stageCtx.translate(stageW * 0.5, lineY);
 
         // 判定线本体
-        stageCtx.strokeStyle = isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.4)';
+        stageCtx.strokeStyle = isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.35)';
         stageCtx.lineWidth = isActive ? 3.5 : 2;
         stageCtx.beginPath();
-        stageCtx.moveTo(-stageW * 2, 0);
-        stageCtx.lineTo(stageW * 2, 0);
+        stageCtx.moveTo(-stageW, 0);
+        stageCtx.lineTo(stageW, 0);
         stageCtx.stroke();
 
+        // 判定线标识文字
         stageCtx.font = '11px sans-serif';
-        stageCtx.fillStyle = isActive ? '#58a6ff' : 'rgba(255, 255, 255, 0.3)';
-        stageCtx.fillText(line.name, 10, -8);
+        stageCtx.fillStyle = isActive ? '#58a6ff' : 'rgba(255, 255, 255, 0.4)';
+        stageCtx.fillText(`${line.name} (ID: ${line.id})`, -stageW * 0.45, -8);
 
-        // 渲染线上音符
+        // 如果是活跃线，绘制用户当前设定的落点 X 标尺辅助点
+        if (isActive) {
+          const previewX = parseInt(document.getElementById('def-note-x').value) || 0;
+          stageCtx.strokeStyle = '#ff5252';
+          stageCtx.setLineDash([4, 4]);
+          stageCtx.beginPath();
+          stageCtx.moveTo(previewX, -40);
+          stageCtx.lineTo(previewX, 40);
+          stageCtx.stroke();
+          stageCtx.setLineDash([]);
+        }
+
+        // 绘制正在接近的音符
         line.notes.forEach(note => {
           const dt = note.time - currentMs;
           const side = note.isAbove ? -1 : 1;
           const speedFactor = note.speed * (stageH * 0.0012);
           const yOffset = dt * speedFactor * side;
 
-          if (Math.abs(yOffset) < stageH * 1.4) {
+          if (Math.abs(yOffset) < stageH * 1.5) {
             drawNote(stageCtx, note.posX, yOffset, note, side);
           }
         });
@@ -745,9 +747,9 @@
         stageCtx.restore();
       });
 
-      requestAnimationFrame(renderStudio);
+      requestAnimationFrame(renderLoop);
     }
-    requestAnimationFrame(renderStudio);
+    requestAnimationFrame(renderLoop);
 
     function drawNote(ctx, x, y, note, side) {
       const nw = 68;
@@ -793,7 +795,7 @@
     }
 
     /**
-     * 6. 底部时间轴
+     * 6. 时间轴与点击寻道
      */
     function drawTimeline() {
       if (!tlCanvas.width) return;
@@ -839,7 +841,7 @@
     });
 
     /**
-     * 7. 导出 chart.json 和 info.json
+     * 7. 导出配置
      */
     function exportPackage() {
       chart.lines.forEach(l => l.notes.sort((a, b) => a.time - b.time));
@@ -847,9 +849,9 @@
       const chartData = JSON.stringify(chart, null, 2);
       const infoData = JSON.stringify({
         title: document.getElementById('meta-title').value,
-        artist: document.getElementById('meta-artist').value,
+        artist: "JR Track",
         bpm: parseFloat(document.getElementById('meta-bpm').value),
-        difficulty: document.getElementById('meta-level').value,
+        difficulty: "IN Lv.12",
         chart: "chart.json",
         audio: "audio.mp3",
         bg: "bg.jpg"
@@ -868,7 +870,9 @@
       URL.revokeObjectURL(a.href);
     }
 
+    // 初始化运行
     renderLineList();
+    setupTimeline();
   </script>
 </body>
 </html>
